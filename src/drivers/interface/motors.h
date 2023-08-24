@@ -58,8 +58,33 @@
 #define MOTORS_TIM_DBG_CFG        DBGMCU_APB2PeriphConfig
 #define MOTORS_GPIO_AF_CFG(a,b,c) GPIO_PinAFConfig(a,b,c)
 
+// Compensate thrust depending on battery voltage so it will produce about the same
+// amount of thrust independent of the battery voltage. Based on thrust measurement.
+// Not applied for brushless motor setup.
+#define ENABLE_THRUST_BAT_COMPENSATED
 
-#ifdef CONFIG_MOTORS_ESC_PROTOCOL_ONESHOT125
+
+#ifdef CONFIG_MOTORS_ESC_PROTOCOL_SERVO
+/**
+ * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
+ * brushed motors connected they can turn on at full speed when it is powered on!
+ *
+ * Generates a PWM wave (50 - 400 Hz update rate with 1-2 ms high pulse) using the timer. That way we can use the same
+ * base as for the regular PWM driver. This means it will be a PWM with a period of the update rate configured to be high
+ * only in the 1-2 ms range.
+ */
+  #define BLMC_PERIOD 0.0025   // 2.5ms = 400Hz
+  #define MOTORS_HIGH_PERIOD_ZERO  0.001 // 1ms for zero throttle
+
+  #define MOTORS_BL_PWM_PRESCALE_RAW   (uint32_t)((TIM_CLOCK_HZ/0xFFFF) * BLMC_PERIOD + 1) // +1 is to not end up above 0xFFFF in the end
+  #define MOTORS_BL_PWM_CNT_FOR_PERIOD (uint32_t)(TIM_CLOCK_HZ * BLMC_PERIOD / MOTORS_BL_PWM_PRESCALE_RAW)
+  #define MOTORS_BL_PWM_CNT_FOR_HIGH   (uint32_t)(TIM_CLOCK_HZ * MOTORS_HIGH_PERIOD_ZERO / MOTORS_BL_PWM_PRESCALE_RAW)
+  #define MOTORS_BL_PWM_PERIOD         MOTORS_BL_PWM_CNT_FOR_PERIOD
+  #define MOTORS_BL_PWM_PRESCALE       (uint16_t)(MOTORS_BL_PWM_PRESCALE_RAW - 1)
+  #define MOTORS_BL_POLARITY           TIM_OCPolarity_Low
+
+// #ifdef CONFIG_MOTORS_ESC_PROTOCOL_ONESHOT125
+#elif defined(CONFIG_MOTORS_ESC_PROTOCOL_ONESHOT125)
 /**
  * *WARNING* Make sure the brushless driver is configured correctly as on the Crazyflie with normal
  * brushed motors connected they can turn on at full speed when it is powered on!
@@ -267,6 +292,16 @@ extern const uint16_t testsound[NBR_OF_MOTORS];
 /*** Public interface ***/
 
 /**
+ * Initialisation of additional bin
+ */
+void additionalBinInit(const MotorPerifDef* motorMap);
+
+void binSetHi(const MotorPerifDef* motorMap);
+
+void binSetLo(const MotorPerifDef* motorMap);
+
+
+/**
  * Initialisation. Will set all motors ratio to 0%
  */
 void motorsInit(const MotorPerifDef** motorMapSelect);
@@ -347,15 +382,5 @@ void motorsBeep(int id, bool enable, uint16_t frequency, uint16_t ratio);
  */
 const MotorHealthTestDef* motorsGetHealthTestSettings(uint32_t id);
 
-/**
- * @brief Utility function to calculate thrust (actually PWM ratio), compensated for the battery state
- * Note: both input and output may be outside the valid PWM range.
- *
- * @param id The id of the motor
- * @param ithrust The desired thrust
- * @param supplyVoltage The battery voltage
- * @return float The PWM ratio required to get the desired thrust given the battery state.
- */
-float motorsCompensateBatteryVoltage(uint32_t id, float iThrust, float supplyVoltage);
-
 #endif /* __MOTORS_H__ */
+

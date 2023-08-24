@@ -7,7 +7,7 @@
  *
  * Crazyflie Firmware
  *
- * Copyright (C) 2011-2022 Bitcraze AB
+ * Copyright (C) 2011-2016 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -57,6 +57,7 @@
 #include "static_mem.h"
 #include "rateSupervisor.h"
 
+
 static bool isInit;
 static bool emergencyStop = false;
 static int emergencyStopTimeout = EMERGENCY_STOP_TIMEOUT_DISABLED;
@@ -67,12 +68,10 @@ static uint32_t inToOutLatency;
 static setpoint_t setpoint;
 static sensorData_t sensorData;
 static state_t state;
+// static floaty_state_t floaty_state;
 static control_t control;
-
-static motors_thrust_uncapped_t motorThrustUncapped;
-static motors_thrust_uncapped_t motorThrustBatCompUncapped;
-static motors_thrust_pwm_t motorPwm;
-
+static floaty_control_t floaty_control;
+static motors_thrust_t motorPower;
 // For scratch storage - never logged or passed to other subsystems.
 static setpoint_t tempSetpoint;
 
@@ -82,6 +81,17 @@ static ControllerType controllerType;
 static STATS_CNT_RATE_DEFINE(stabilizerRate, 500);
 static rateSupervisor_t rateSupervisorContext;
 static bool rateWarningDisplayed = false;
+
+const MotorPerifDef BIN_PA7_BRUSHLESS_OD =
+{
+    .drvType       = BRUSHLESS,
+    .gpioPerif     = RCC_AHB1Periph_GPIOA,
+    .gpioPort      = GPIOA,
+    .gpioPin       = GPIO_Pin_7,
+    .gpioPinSource = GPIO_PinSource7,
+    .gpioOType     = GPIO_OType_OD,
+};
+
 
 static struct {
   // position - mm
@@ -182,10 +192,13 @@ void stabilizerInit(StateEstimatorType estimator)
   powerDistributionInit();
   motorsInit(platformConfigGetMotorMapping());
   collisionAvoidanceInit();
-  estimatorType = stateEstimatorGetType();
-  controllerType = controllerGetType();
+  estimatorType = getStateEstimator();
+  controllerType = getControllerType();
 
   STATIC_MEM_TASK_CREATE(stabilizerTask, stabilizerTask, STABILIZER_TASK_NAME, NULL, STABILIZER_TASK_PRI);
+
+  // for initializing additional bin for testing
+  additionalBinInit(&BIN_PA7_BRUSHLESS_OD);
 
   isInit = true;
 }
@@ -215,28 +228,11 @@ static void checkEmergencyStopTimeout()
   }
 }
 
-static void batteryCompensation(const motors_thrust_uncapped_t* motorThrustUncapped, motors_thrust_uncapped_t* motorThrustBatCompUncapped)
-{
-  float supplyVoltage = pmGetBatteryVoltage();
-
-  for (int motor = 0; motor < STABILIZER_NR_OF_MOTORS; motor++)
-  {
-    motorThrustBatCompUncapped->list[motor] = motorsCompensateBatteryVoltage(motor, motorThrustUncapped->list[motor], supplyVoltage);
-  }
-}
-
-static void setMotorRatios(const motors_thrust_pwm_t* motorPwm)
-{
-  motorsSetRatio(MOTOR_M1, motorPwm->motors.m1);
-  motorsSetRatio(MOTOR_M2, motorPwm->motors.m2);
-  motorsSetRatio(MOTOR_M3, motorPwm->motors.m3);
-  motorsSetRatio(MOTOR_M4, motorPwm->motors.m4);
-}
-
-/* The stabilizer loop runs at 1kHz. It is the
+/* The stabilizer loop runs at 1kHz (stock) or 500Hz (kalman). It is the
  * responsibility of the different functions to run slower by skipping call
  * (ie. returning without modifying the output structure).
  */
+
 static void stabilizerTask(void* param)
 {
   uint32_t tick;
@@ -256,13 +252,17 @@ static void stabilizerTask(void* param)
   // Initialize tick to something else then 0
   tick = 1;
 
-  rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 997, 1003, 1);
+  // rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 997, 1003, 1);
+  rateSupervisorInit(&rateSupervisorContext, xTaskGetTickCount(), M2T(1000), 999, 1003, 1);
 
   DEBUG_PRINT("Ready to fly.\n");
 
   while(1) {
-    // The sensor should unlock at 1kHz
-    sensorsWaitDataReady();
+    // // The sensor should unlock at 1kHz
+    // sensorsWaitDataReady();
+
+    vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
+    lastWakeTime = xTaskGetTickCount();
 
     // update sensorData struct (for logging variables)
     sensorsAcquire(&sensorData, tick);
@@ -271,14 +271,14 @@ static void stabilizerTask(void* param)
       healthRunTests(&sensorData);
     } else {
       // allow to update estimator dynamically
-      if (stateEstimatorGetType() != estimatorType) {
+      if (getStateEstimator() != estimatorType) {
         stateEstimatorSwitchTo(estimatorType);
-        estimatorType = stateEstimatorGetType();
+        estimatorType = getStateEstimator();
       }
       // allow to update controller dynamically
-      if (controllerGetType() != controllerType) {
+      if (getControllerType() != controllerType) {
         controllerInit(controllerType);
-        controllerType = controllerGetType();
+        controllerType = getControllerType();
       }
 
       stateEstimator(&state, tick);
@@ -291,9 +291,10 @@ static void stabilizerTask(void* param)
       commanderGetSetpoint(&setpoint, &state);
       compressSetpoint();
 
-      collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, tick);
+      // collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, tick);
 
-      controller(&control, &setpoint, &sensorData, &state, tick);
+      // controller(&control, &setpoint, &sensorData, &state, tick);
+      controller(&floaty_control, &setpoint, &sensorData, &state, tick);
 
       checkEmergencyStopTimeout();
 
@@ -302,14 +303,20 @@ static void stabilizerTask(void* param)
       // we are ok to fly, or if the Crazyflie is in flight.
       //
       supervisorUpdate(&sensorData);
+      
 
       if (emergencyStop || (systemIsArmed() == false)) {
         motorsStop();
       } else {
-        powerDistribution(&control, &motorThrustUncapped);
-        batteryCompensation(&motorThrustUncapped, &motorThrustBatCompUncapped);
-        powerDistributionCap(&motorThrustBatCompUncapped, &motorPwm);
-        setMotorRatios(&motorPwm);
+        powerDistribution(&motorPower, &floaty_control);
+        motorsSetRatio(MOTOR_M1, motorPower.m1);
+        motorsSetRatio(MOTOR_M2, motorPower.m2);
+        motorsSetRatio(MOTOR_M3, motorPower.m3);
+        motorsSetRatio(MOTOR_M4, motorPower.m4);
+        // motorsSetRatio(MOTOR_M1, 0);
+        // motorsSetRatio(MOTOR_M2, 5000);
+        // motorsSetRatio(MOTOR_M3, 20000);
+        // motorsSetRatio(MOTOR_M4, 45000);
       }
 
 #ifdef CONFIG_DECK_USD
@@ -320,6 +327,16 @@ static void stabilizerTask(void* param)
         usddeckTriggerLogging();
       }
 #endif
+
+
+
+
+      // if(tick%2==0)
+      //   binSetHi(&BIN_PA7_BRUSHLESS_OD);
+      // else
+      //   // if(tick%10==5)
+      //   binSetLo(&BIN_PA7_BRUSHLESS_OD);
+
       calcSensorToOutputLatency(&sensorData);
       tick++;
       STATS_CNT_RATE_EVENT(&stabilizerRate);
@@ -363,7 +380,7 @@ PARAM_GROUP_START(stabilizer)
  */
 PARAM_ADD_CORE(PARAM_UINT8, estimator, &estimatorType)
 /**
- * @brief Controller type Any(0), PID(1), Mellinger(2), INDI(3), Brescianini(4) (Default: 0)
+ * @brief Controller type Any(0), PID(1), Mellinger(2), INDI(3) (Default: 0)
  */
 PARAM_ADD_CORE(PARAM_UINT8, controller, &controllerType)
 /**
@@ -813,31 +830,3 @@ LOG_ADD(LOG_INT16, ratePitch, &stateCompressed.ratePitch)
  */
 LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
 LOG_GROUP_STOP(stateEstimateZ)
-
-
-LOG_GROUP_START(motor)
-
-/**
- * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
- * and may have values outside the [0 - UINT16_MAX] range.
- */
-LOG_ADD(LOG_INT32, m1req, &motorThrustBatCompUncapped.motors.m1)
-
-/**
- * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
- * and may have values outside the [0 - UINT16_MAX] range.
- */
-LOG_ADD(LOG_INT32, m2req, &motorThrustBatCompUncapped.motors.m2)
-
-/**
- * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
- * and may have values outside the [0 - UINT16_MAX] range.
- */
-LOG_ADD(LOG_INT32, m3req, &motorThrustBatCompUncapped.motors.m3)
-
-/**
- * @brief Requested motor power for m1, including battery compensation. Same scale as the motor PWM but uncapped
- * and may have values outside the [0 - UINT16_MAX] range.
- */
-LOG_ADD(LOG_INT32, m4req, &motorThrustBatCompUncapped.motors.m4)
-LOG_GROUP_STOP(motor)

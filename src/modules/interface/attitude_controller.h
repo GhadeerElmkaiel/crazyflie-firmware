@@ -73,10 +73,5 @@ void attitudeControllerResetAllPID(void);
  */
 void attitudeControllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t* yaw);
 
-/**
- * Get yaw max delta
- */
-float attitudeControllerGetYawMaxDelta(void);
-
 
 #endif /* ATTITUDE_CONTROLLER_H_ */

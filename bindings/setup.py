@@ -42,6 +42,7 @@ fw_sources = [
     "src/modules/src/controller_mellinger.c",
     "src/modules/src/controller_brescianini.c",
     "src/modules/src/power_distribution_quadrotor.c",
+    "src/modules/src/power_distribution_floaty.c",
     # "src/modules/src/power_distribution_flapper.c",
 ]
 

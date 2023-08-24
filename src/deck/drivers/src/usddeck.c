@@ -416,8 +416,7 @@ TCHAR* f_gets_without_comments (
   while (n < len - 1) { /* Read characters until buffer gets filled */
     f_read(fp, &c, 1, &rc);
     if (rc != 1) {
-      *p = 0;
-      return 0; /* When no data read (eof or error), return with error. */
+      break;
     }
     if (c == '\n') {
       if (isPureComment){
@@ -442,7 +441,7 @@ TCHAR* f_gets_without_comments (
     }
   }
   *p = 0;
-  return buff;
+  return n ? buff : 0;      /* When no data read (eof or error), return with error. */
 }
 
 
@@ -637,13 +636,8 @@ static void usdLogTask(void* prm)
           cfg->numBytes = 0;
           while (true) {
             line = f_gets_without_comments(readBuffer, sizeof(readBuffer), &logFile);
-            if (!line || strncmp(line, "on:", 3) == 0) {
+            if (!line || strncmp(line, "on:", 3) == 0)
               break;
-            }
-            // skip lines that do not have at least two characters (1 for group, 1 for '.', 1 for name)
-            if (strlen(line) <= 3) {
-              continue;
-            }
             char *group = line;
             char *name = 0;
             for (int i = 0; i < strlen(line); ++i) {

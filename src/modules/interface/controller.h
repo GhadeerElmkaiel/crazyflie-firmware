@@ -33,17 +33,17 @@ typedef enum {
   ControllerTypePID,
   ControllerTypeMellinger,
   ControllerTypeINDI,
-  ControllerTypeBrescianini,
+  ControllerTypeFloaty,
   ControllerType_COUNT,
 } ControllerType;
 
 void controllerInit(ControllerType controller);
 bool controllerTest(void);
-void controller(control_t *control, const setpoint_t *setpoint,
+void controller(floaty_control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
                                          const state_t *state,
                                          const uint32_t tick);
-ControllerType controllerGetType(void);
+ControllerType getControllerType(void);
 const char* controllerGetName();
 
 #endif //__CONTROLLER_H__

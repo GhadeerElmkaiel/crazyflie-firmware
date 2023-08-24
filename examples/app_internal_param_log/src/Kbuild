@@ -1,1 +1,1 @@
-obj-y += internal_param_log.o
+obj-y += app_internal_param_log.o

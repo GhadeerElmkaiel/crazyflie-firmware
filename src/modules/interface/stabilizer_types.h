@@ -7,7 +7,7 @@
  *
  * Crazyflie control firmware
  *
- * Copyright (C) 2011-2022 Bitcraze AB
+ * Copyright (C) 2011-2012 Bitcraze AB
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -89,21 +89,8 @@ typedef enum {
 } measurementSource_t;
 
 typedef struct tdoaMeasurement_s {
-  union {
-    point_t anchorPositions[2];
-    struct {
-      point_t anchorPositionA;
-      point_t anchorPositionB;
-    };
-  };
-  union {
-    uint8_t anchorIds[2];
-    struct {
-      uint8_t anchorIdA;
-      uint8_t anchorIdB;
-    };
-  };
-
+  point_t anchorPositions[2];
+  uint8_t anchorIds[2];
   float distanceDiff;
   float stdDev;
 } tdoaMeasurement_t;
@@ -180,65 +167,36 @@ typedef struct state_s {
   acc_t acc;                // Gs (but acc.z without considering gravity)
 } state_t;
 
-#define STABILIZER_NR_OF_MOTORS 4
-
-typedef enum control_mode_e {
-  controlModeLegacy      = 0, // legacy mode with int16_t roll, pitch, yaw and float thrust
-  controlModeForceTorque = 1,
-  controlModeForce       = 2,
-} control_mode_t;
-
 typedef struct control_s {
-  union {
-    // controlModeLegacy
-    struct {
-      int16_t roll;
-      int16_t pitch;
-      int16_t yaw;
-      float thrust;
-    };
-
-    // controlModeForceTorque
-    // Note: Using SI units for a controller makes it hard to tune it for different platforms. The normalized force API
-    // is probably a better option.
-    struct {
-      float thrustSi;  // N
-      union { // Nm
-        float torque[3];
-        struct {
-          float torqueX;
-          float torqueY;
-          float torqueZ;
-        };
-      };
-    };
-
-    // controlModeForce
-    float normalizedForces[STABILIZER_NR_OF_MOTORS]; // 0.0 ... 1.0
-  };
-
-  control_mode_t controlMode;
+  int16_t roll;
+  int16_t pitch;
+  int16_t yaw;
+  float thrust;
 } control_t;
 
-typedef union {
-  int32_t list[STABILIZER_NR_OF_MOTORS];
-  struct {
-    int32_t m1;
-    int32_t m2;
-    int32_t m3;
-    int32_t m4;
-  } motors;
-} motors_thrust_uncapped_t;
+typedef struct floaty_control_s {
+  float flap_1;
+  float flap_2;
+  float flap_3;
+  float flap_4;
+} floaty_control_t;
 
-typedef union {
-  uint16_t list[STABILIZER_NR_OF_MOTORS];
-  struct {
-    uint16_t m1;  // PWM ratio
-    uint16_t m2;  // PWM ratio
-    uint16_t m3;  // PWM ratio
-    uint16_t m4;  // PWM ratio
-  } motors;
-} motors_thrust_pwm_t;
+typedef struct floaty_state_s {
+  attitude_t attitude;      // rad
+  quaternion_t attitudeQuaternion;
+  point_t position;         // m
+  velocity_t velocity;      // m/s
+  acc_t acc;                // Gs (but acc.z without considering gravity)
+  Axis3f angularRates;      // rad/s
+  floaty_control_t flaps;   // rad (I guess it is rad)
+} floaty_state_t;
+
+typedef struct motors_thrust_s {
+  uint16_t m1;  // PWM ratio
+  uint16_t m2;  // PWM ratio
+  uint16_t m3;  // PWM ratio
+  uint16_t m4;  // PWM ratio
+} motors_thrust_t;
 
 typedef enum mode_e {
   modeDisable = 0,
@@ -362,11 +320,14 @@ typedef struct
 #define RATE_100_HZ 100
 #define RATE_50_HZ 50
 #define RATE_25_HZ 25
+#define RATE_10_HZ 10
 
 #define RATE_MAIN_LOOP RATE_1000_HZ
+// #define RATE_MAIN_LOOP RATE_500_HZ
 #define ATTITUDE_RATE RATE_500_HZ
 #define POSITION_RATE RATE_100_HZ
 #define RATE_HL_COMMANDER RATE_100_HZ
+#define SYS_ID_RATE RATE_100_HZ
 
 #define RATE_DO_EXECUTE(RATE_HZ, TICK) ((TICK % (RATE_MAIN_LOOP / RATE_HZ)) == 0)
 

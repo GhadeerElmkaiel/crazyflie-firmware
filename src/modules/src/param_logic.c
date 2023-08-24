@@ -407,10 +407,6 @@ static char paramWriteByNameProcess(char* group, char* name, int type, void *val
 
   paramSet(index, valptr);
 
-  if (params[index].callback) {
-    params[index].callback();
-  }
-
   return 0;
 }
 

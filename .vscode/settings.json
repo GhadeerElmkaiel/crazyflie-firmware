@@ -5,6 +5,36 @@
         "**/bower_components": true
     },
     "files.associations": {
-        "bootloader.h": "c"
+        "bootloader.h": "c",
+        "stdint.h": "c",
+        "cf_math.h": "c",
+        "stabilizer_types.h": "c",
+        "command_lookup_table.h": "c",
+        "math3d.h": "c",
+        "*.tcc": "c",
+        "optional": "c",
+        "istream": "c",
+        "ostream": "c",
+        "ratio": "c",
+        "system_error": "c",
+        "array": "c",
+        "functional": "c",
+        "tuple": "c",
+        "type_traits": "c",
+        "utility": "c",
+        "variant": "c",
+        "autoconf.h": "c",
+        "power_distribution.h": "c",
+        "position_controller.h": "c",
+        "attitude_controller.h": "c",
+        "thread": "c",
+        "stm32fxxx.h": "c",
+        "stabilizer.h": "c",
+        "system.h": "c",
+        "task.h": "c",
+        "bmi088.h": "c",
+        "kalman_core.h": "c",
+        "floaty_kalman_core.h": "c",
+        "arm_math.h": "c"
     }
 }

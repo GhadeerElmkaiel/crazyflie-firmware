@@ -40,6 +40,12 @@ typedef enum {
   StateEstimatorTypeCount,
 } StateEstimatorType;
 
+
+typedef enum {
+  floatyKalmanEstimator =0,
+  FloatyStateEstimatorTypeCount,
+} FloatyStateEstimatorType;
+
 typedef enum {
   MeasurementTypeTDOA,
   MeasurementTypePosition,
@@ -53,6 +59,7 @@ typedef enum {
   MeasurementTypeGyroscope,
   MeasurementTypeAcceleration,
   MeasurementTypeBarometer,
+  FloatyInputAnglesUpdate,
 } MeasurementType;
 
 typedef struct
@@ -72,14 +79,41 @@ typedef struct
     gyroscopeMeasurement_t gyroscope;
     accelerationMeasurement_t acceleration;
     barometerMeasurement_t barometer;
+    floaty_control_t flapsAngles;
   } data;
 } measurement_t;
+
+// typedef enum {
+//   FloatyMeasurementTypePosition,
+//   FloatyMeasurementTypePose,
+//   FloatyMeasurementTypeYawError,
+//   FloatyMeasurementTypeSweepAngle,
+//   FloatyMeasurementTypeGyroscope,
+//   FloatyMeasurementTypeAcceleration,
+//   FloatyInputAnglesUpdate,
+// } FloatyMeasurementType;
+
+// typedef struct
+// {
+//   FloatyMeasurementType type;
+//   union
+//   {
+//     positionMeasurement_t position;
+//     poseMeasurement_t pose;
+//     yawErrorMeasurement_t yawError;
+//     sweepAngleMeasurement_t sweepAngle;
+//     gyroscopeMeasurement_t gyroscope;
+//     accelerationMeasurement_t acceleration;
+//     barometerMeasurement_t flapAngles;
+//   } data;
+// } floatyMeasurement_t;
 
 void stateEstimatorInit(StateEstimatorType estimator);
 bool stateEstimatorTest(void);
 void stateEstimatorSwitchTo(StateEstimatorType estimator);
 void stateEstimator(state_t *state, const uint32_t tick);
-StateEstimatorType stateEstimatorGetType(void);
+void floatyStateEstimator(floaty_state_t *floaty_state, const uint32_t tick);
+StateEstimatorType getStateEstimator(void);
 const char* stateEstimatorGetName();
 
 // Support to incorporate additional sensors into the state estimate via the following functions

@@ -40,6 +40,8 @@ static size_t min(size_t a, size_t b)
     }
 }
 
+#define END_TAG (0xffffu)
+
 int kveStorageWriteItem(kveMemory_t *kve, size_t address, const char* key, const void* buffer, size_t length)
 {
   kveItemHeader_t header;
@@ -68,7 +70,7 @@ uint16_t kveStorageWriteHole(kveMemory_t *kve, size_t address, size_t full_lengt
 }
 
 uint16_t kveStorageWriteEnd(kveMemory_t *kve, size_t address) {
-    uint16_t endTag = KVE_END_TAG;
+    uint16_t endTag = END_TAG;
 
     kve->write(address, &endTag, 2);
 
@@ -108,7 +110,7 @@ size_t kveStorageFindItemByKey(kveMemory_t *kve, size_t address, const char * ke
         length = searchBuffer[0] + (searchBuffer[1]<<8);
         keyLength = searchBuffer[2];
 
-        if (length == KVE_END_TAG) {
+        if (length == END_TAG) {
             return SIZE_MAX;
         }
 
@@ -144,7 +146,7 @@ size_t kveStorageFindItemByPrefix(kveMemory_t *kve, size_t address,
         length = searchBuffer[0] + (searchBuffer[1]<<8);
         keyLength = searchBuffer[2];
 
-        if (length == KVE_END_TAG) {
+        if (length == END_TAG) {
             *itemAddress = SIZE_MAX;
             return SIZE_MAX;
         }
@@ -172,7 +174,7 @@ size_t kveStorageFindEnd(kveMemory_t *kve, size_t address) {
 
     while (currentAddress < (kve->memorySize - 2)) {
         kve->read(currentAddress, &header, sizeof(header));
-        if (header.full_length == KVE_END_TAG) {
+        if (header.full_length == END_TAG) {
             return currentAddress;
         }
 
@@ -211,7 +213,7 @@ size_t kveStorageFindNextItem(kveMemory_t *kve, size_t address)
 
     // Jump over the current item
     kve->read(currentAddress, &header, sizeof(header));
-    if (header.full_length == KVE_END_TAG) {
+    if (header.full_length == END_TAG) {
         return KVE_STORAGE_INVALID_ADDRESS;
     }
     currentAddress += header.full_length;
@@ -220,7 +222,7 @@ size_t kveStorageFindNextItem(kveMemory_t *kve, size_t address)
         kve->read(currentAddress, &header, sizeof(header));
 
 
-        if (header.full_length == KVE_END_TAG) {
+        if (header.full_length == END_TAG) {
             return KVE_STORAGE_INVALID_ADDRESS;
         }
 

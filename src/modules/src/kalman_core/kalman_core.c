@@ -64,6 +64,7 @@
 #include "math3d.h"
 #include "static_mem.h"
 
+#include "lighthouse_calibration.h"
 // #define DEBUG_STATE_CHECK
 
 // the reversion of pitch and roll to zero

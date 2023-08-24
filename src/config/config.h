@@ -101,6 +101,7 @@
 #define UART2_TASK_PRI          3
 #define CRTP_SRV_TASK_PRI       0
 #define PLATFORM_SRV_TASK_PRI   0
+#define FLOATY_KALMAN_TASK_PRI  3
 
 // Not compiled
 #if 0
@@ -158,6 +159,7 @@
 #define CPX_TASK_NAME           "CPX"
 #define APP_TASK_NAME           "APP"
 #define FLAPPERDECK_TASK_NAME   "FLAPPERDECK"
+#define FLOATY_KALMAN_TASK_NAME "FLOATY-KALMAN"
 
 
 //Task stack sizes
@@ -203,6 +205,7 @@
 #define OA_DECK_TASK_STACKSIZE        (2 * configMINIMAL_STACK_SIZE)
 #define KALMAN_TASK_STACKSIZE         (3 * configMINIMAL_STACK_SIZE)
 #define FLAPPERDECK_TASK_STACKSIZE    (2 * configMINIMAL_STACK_SIZE)
+#define FLOATY_KALMAN_TASK_STACKSIZE  (3 * configMINIMAL_STACK_SIZE)
 
 //The radio channel. From 0 to 125
 #define RADIO_CHANNEL 80

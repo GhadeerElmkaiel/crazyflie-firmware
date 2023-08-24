@@ -51,7 +51,6 @@
 #include "filter.h"
 #include "static_mem.h"
 #include "estimator.h"
-#include "platform_defaults.h"
 
 #define SENSORS_ENABLE_PRESSURE_LPS25H
 //#define GYRO_ADD_RAW_AND_VARIANCE_LOG_VALUES
@@ -143,10 +142,13 @@ static bool isMpu6500TestPassed = false;
 static bool isAK8963TestPassed = false;
 static bool isLPS25HTestPassed = false;
 
-// IMU alignment Euler angles
-static float imuPhi = IMU_PHI;
-static float imuTheta = IMU_THETA;
-static float imuPsi = IMU_PSI;
+// Precalculated values for IMU alignment
+static float sphi   = sinf(IMU_PHI * (float) M_PI / 180);
+static float cphi   = cosf(IMU_PHI * (float) M_PI / 180);
+static float stheta = sinf(IMU_THETA * (float) M_PI / 180);
+static float ctheta = cosf(IMU_THETA * (float) M_PI / 180);
+static float spsi   = sinf(IMU_PSI * (float) M_PI / 180);
+static float cpsi   = cosf(IMU_PSI * (float) M_PI / 180);
 
 static float R[3][3];
 
@@ -392,6 +394,7 @@ static void sensorsDeviceInit(void)
   // but it works well for handling vibrations and unbalanced propellers
   // Set output rate (1): 1000 / (1 + 0) = 1000Hz
   mpu6500SetRate(0);
+  // mpu6500SetRate(1);
   // Set digital low-pass bandwidth for gyro
   mpu6500SetDLPFMode(MPU6500_DLPF_BW_98);
   // Init second order filer for accelerometer
@@ -431,10 +434,10 @@ static void sensorsDeviceInit(void)
   }
 #endif
 
-  cosPitch = cosf(configblockGetCalibPitch() * (float) M_PI / 180);
-  sinPitch = sinf(configblockGetCalibPitch() * (float) M_PI / 180);
-  cosRoll = cosf(configblockGetCalibRoll() * (float) M_PI / 180);
-  sinRoll = sinf(configblockGetCalibRoll() * (float) M_PI / 180);
+  cosPitch = cosf(configblockGetCalibPitch() * (float) M_PI/180);
+  sinPitch = sinf(configblockGetCalibPitch() * (float) M_PI/180);
+  cosRoll = cosf(configblockGetCalibRoll() * (float) M_PI/180);
+  sinRoll = sinf(configblockGetCalibRoll() * (float) M_PI/180);
 }
 
 
@@ -715,7 +718,7 @@ static void sensorsCalculateVarianceAndMean(BiasObj* bias, Axis3f* varOut, Axis3
     sumSq[2] += bias->buffer[i].z * bias->buffer[i].z;
   }
 
-
+  
   meanOut->x = (float) sum[0] / SENSORS_NBR_OF_BIAS_SAMPLES;
   meanOut->y = (float) sum[1] / SENSORS_NBR_OF_BIAS_SAMPLES;
   meanOut->z = (float) sum[2] / SENSORS_NBR_OF_BIAS_SAMPLES;
@@ -868,16 +871,6 @@ void __attribute__((used)) EXTI13_Callback(void)
  */
 static void sensorsAlignToAirframe(Axis3f* in, Axis3f* out)
 {
-  // IMU alignment
-  static float sphi, cphi, stheta, ctheta, spsi, cpsi;
-
-  sphi   = sinf(imuPhi * (float) M_PI / 180);
-  cphi   = cosf(imuPhi * (float) M_PI / 180);
-  stheta = sinf(imuTheta * (float) M_PI / 180);
-  ctheta = cosf(imuTheta * (float) M_PI / 180);
-  spsi   = sinf(imuPsi * (float) M_PI / 180);
-  cpsi   = cosf(imuPsi * (float) M_PI / 180);
-
   R[0][0] = ctheta * cpsi;
   R[0][1] = ctheta * spsi;
   R[0][2] = -stheta;
@@ -994,20 +987,5 @@ PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, AK8963, &isAK8963TestPassed)
  * @brief Nonzero if the LPS25H self-test passes
  */
 PARAM_ADD(PARAM_UINT8 | PARAM_RONLY, LPS25H, &isLPS25HTestPassed)
-
-/**
- * @brief Euler angle Phi defining IMU orientation on the airframe (in degrees)
- */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuPhi, &imuPhi)
-
-/**
- * @brief Euler angle Theta defining IMU orientation on the airframe (in degrees)
- */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuTheta, &imuTheta)
-
-/**
- * @brief Euler angle Psi defining IMU orientation on the airframe (in degrees)
- */
-PARAM_ADD(PARAM_FLOAT | PARAM_PERSISTENT, imuPsi, &imuPsi)
 
 PARAM_GROUP_STOP(imu_tests)

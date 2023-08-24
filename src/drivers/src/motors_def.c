@@ -689,6 +689,17 @@ static const MotorPerifDef MOTORS_PA7_TIM14_CH1_BRUSHLESS_OD =
     .preloadConfig = TIM_OC1PreloadConfig,
 };
 
+//  Bin I defined for testing
+static const MotorPerifDef BIN_PA7_BRUSHLESS_OD =
+{
+    .drvType       = BRUSHLESS,
+    .gpioPerif     = RCC_AHB1Periph_GPIOA,
+    .gpioPort      = GPIOA,
+    .gpioPin       = GPIO_Pin_7,
+    .gpioPinSource = GPIO_PinSource7,
+    .gpioOType     = GPIO_OType_OD,
+};
+
 /**
  * Mapping for Tags that don't have motors.
  * Actually same mapping as for CF2 but the pins are not physically connected.
@@ -770,4 +781,3 @@ const MotorPerifDef* motorMapCF21Brushless[NBR_OF_MOTORS] =
     &MOTORS_PA15_TIM2_CH1_BRUSHLESS_OD,
     &MOTORS_PB10_TIM2_CH3_BRUSHLESS_OD
 };
-

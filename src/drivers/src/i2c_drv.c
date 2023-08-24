@@ -652,6 +652,7 @@ void __attribute__((used)) I2C1_EV_IRQHandler(void)
 }
 
 #ifdef CONFIG_DECK_USD_USE_ALT_PINS_AND_SPI
+// #if defined(CONFIG_DECK_USD_USE_ALT_PINS_AND_SPI) && !defined(CONFIG_MOTORS_ESC_PROTOCOL_DSHOT)
 void __attribute__((used)) DMA1_Stream5_IRQHandler(void)
 #else
 void __attribute__((used)) DMA1_Stream0_IRQHandler(void)

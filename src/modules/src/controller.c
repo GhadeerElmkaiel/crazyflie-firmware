@@ -6,7 +6,7 @@
 #include "controller_pid.h"
 #include "controller_mellinger.h"
 #include "controller_indi.h"
-#include "controller_brescianini.h"
+#include "controller_floaty.h"
 
 #include "autoconf.h"
 
@@ -18,17 +18,9 @@ static void initController();
 typedef struct {
   void (*init)(void);
   bool (*test)(void);
-  void (*update)(control_t *control, const setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick);
+  void (*update)(control_t *control, setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick);
   const char* name;
 } ControllerFcns;
-
-static ControllerFcns controllerFunctions[] = {
-  {.init = 0, .test = 0, .update = 0, .name = "None"}, // Any
-  {.init = controllerPidInit, .test = controllerPidTest, .update = controllerPid, .name = "PID"},
-  {.init = controllerMellingerFirmwareInit, .test = controllerMellingerFirmwareTest, .update = controllerMellingerFirmware, .name = "Mellinger"},
-  {.init = controllerINDIInit, .test = controllerINDITest, .update = controllerINDI, .name = "INDI"},
-  {.init = controllerBrescianiniInit, .test = controllerBrescianiniTest, .update = controllerBrescianini, .name = "Brescianini"},
-};
 
 
 void controllerInit(ControllerType controller) {
@@ -48,8 +40,8 @@ void controllerInit(ControllerType controller) {
     #define CONTROLLER ControllerTypeINDI
   #elif defined(CONFIG_CONTROLLER_MELLINGER)
     #define CONTROLLER ControllerTypeMellinger
-  #elif defined(CONFIG_CONTROLLER_BRESCIANINI)
-    #define CONTROLLER ControllerTypeBrescianini
+  #elif defined(CONFIG_CONTROLLER_FLOATY)
+    #define CONTROLLER ControllerTypeFloaty
   #else
     #define CONTROLLER ControllerTypeAny
   #endif
@@ -65,22 +57,30 @@ void controllerInit(ControllerType controller) {
   DEBUG_PRINT("Using %s (%d) controller\n", controllerGetName(), currentController);
 }
 
-ControllerType controllerGetType(void) {
+ControllerType getControllerType(void) {
   return currentController;
 }
 
 static void initController() {
-  controllerFunctions[currentController].init();
+  // Forcing the use of Floaty controller
+  // controllerFunctions[currentController].init();
+  controllerFloatyInit();
 }
 
 bool controllerTest(void) {
-  return controllerFunctions[currentController].test();
+  // Forcing the use of Floaty controller
+  // return controllerFunctions[currentController].test();
+  return controllerFloatyTest();
 }
 
-void controller(control_t *control, const setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick) {
-  controllerFunctions[currentController].update(control, setpoint, sensors, state, tick);
+void controller(floaty_control_t *control, setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick) {
+  // Forcing the use of Floaty controller
+  // controllerFunctions[currentController].update(control, setpoint, sensors, state, tick);
+  controllerFloaty(control, setpoint, sensors, state, tick);
 }
 
 const char* controllerGetName() {
-  return controllerFunctions[currentController].name;
+  // Forcing the use of Floaty controller
+  // return controllerFunctions[currentController].name;
+  return "Floaty";
 }

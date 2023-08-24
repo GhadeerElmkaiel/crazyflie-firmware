@@ -44,9 +44,7 @@
 
 #define KVE_STORAGE_INVALID_ADDRESS (SIZE_MAX)
 
-#define KVE_END_TAG_LENDTH 2
-
-#define KVE_END_TAG (0xffffu)
+#define END_TAG_LENDTH 2
 
 typedef struct itemHeader_s {
   uint16_t full_length;

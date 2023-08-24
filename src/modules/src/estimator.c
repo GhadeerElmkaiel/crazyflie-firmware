@@ -1,4 +1,3 @@
-#include "stm32fxxx.h"
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "static_mem.h"
@@ -10,6 +9,7 @@
 #include "estimator.h"
 #include "estimator_complementary.h"
 #include "estimator_kalman.h"
+#include "estimator_floaty.h"
 #include "log.h"
 #include "statsCnt.h"
 #include "eventtrigger.h"
@@ -53,6 +53,14 @@ typedef struct {
   const char* name;
 } EstimatorFcns;
 
+typedef struct {
+  void (*init)(void);
+  void (*deinit)(void);
+  bool (*test)(void);
+  void (*update)(floaty_state_t *state, const uint32_t tick);
+  const char* name;
+} FloatyEstimatorFcns;
+
 #define NOT_IMPLEMENTED ((void*)0)
 
 static EstimatorFcns estimatorFunctions[] = {
@@ -88,6 +96,16 @@ static EstimatorFcns estimatorFunctions[] = {
         .name = "OutOfTree",
     },
 #endif
+};
+
+static FloatyEstimatorFcns floatyEstimatorFunctions[] = {
+    {
+        .init = estimatorFloatyKalmanInit,
+        .deinit = NOT_IMPLEMENTED,
+        .test = estimatorFloatyKalmanTest,
+        .update = estimatorFloatyKalman,
+        .name = "Floaty",
+    },
 };
 
 void stateEstimatorInit(StateEstimatorType estimator) {
@@ -128,7 +146,7 @@ void stateEstimatorSwitchTo(StateEstimatorType estimator) {
   DEBUG_PRINT("Using %s (%d) estimator\n", stateEstimatorGetName(), currentEstimator);
 }
 
-StateEstimatorType stateEstimatorGetType(void) {
+StateEstimatorType getStateEstimator(void) {
   return currentEstimator;
 }
 
@@ -150,6 +168,11 @@ bool stateEstimatorTest(void) {
 
 void stateEstimator(state_t *state, const uint32_t tick) {
   estimatorFunctions[currentEstimator].update(state, tick);
+}
+
+
+void floatyStateEstimator(floaty_state_t *floaty_state, const uint32_t tick) {
+  floatyEstimatorFunctions[floatyKalmanEstimator].update(floaty_state, tick);
 }
 
 const char* stateEstimatorGetName() {

@@ -1,0 +1,14 @@
+
+#
+# Platform configuration
+#
+# CONFIG_PLATFORM_CF2=y
+CONFIG_PLATFORM_CF2_FLOATY=y
+
+# I added to the motors.h the following 
+# #ifdef CONFIG_MOTORS_ESC_PROTOCOL_SERVO
+# in order to force the 400 Hz if my flag was defined
+CONFIG_MOTORS_ESC_PROTOCOL_SERVO=y
+MOTORS_ESC_PROTOCOL_STANDARD_PWM=y
+CONFIG_CONTROLLER_FLOATY=y
+
