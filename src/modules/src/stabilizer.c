@@ -68,7 +68,8 @@ static uint32_t inToOutLatency;
 static setpoint_t setpoint;
 static sensorData_t sensorData;
 static state_t state;
-// static floaty_state_t floaty_state;
+static floaty_state_t floaty_state;
+
 static control_t control;
 static floaty_control_t floaty_control;
 static motors_thrust_t motorPower;
@@ -258,8 +259,8 @@ static void stabilizerTask(void* param)
   DEBUG_PRINT("Ready to fly.\n");
 
   while(1) {
-    // // The sensor should unlock at 1kHz
-    // sensorsWaitDataReady();
+    // The sensor should unlock at 1kHz
+    sensorsWaitDataReady();
 
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
     lastWakeTime = xTaskGetTickCount();
@@ -281,10 +282,10 @@ static void stabilizerTask(void* param)
         controllerType = getControllerType();
       }
 
-      stateEstimator(&state, tick);
+      stateEstimator(&floaty_state, tick);
       compressState();
 
-      if (crtpCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
+      if (crtpFloatyCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
         commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
       }
 
@@ -294,7 +295,7 @@ static void stabilizerTask(void* param)
       // collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, tick);
 
       // controller(&control, &setpoint, &sensorData, &state, tick);
-      controller(&floaty_control, &setpoint, &sensorData, &state, tick);
+      controller(&floaty_control, &setpoint, &sensorData, &floaty_state, tick);
 
       checkEmergencyStopTimeout();
 
@@ -313,20 +314,17 @@ static void stabilizerTask(void* param)
         motorsSetRatio(MOTOR_M2, motorPower.m2);
         motorsSetRatio(MOTOR_M3, motorPower.m3);
         motorsSetRatio(MOTOR_M4, motorPower.m4);
-        // motorsSetRatio(MOTOR_M1, 0);
-        // motorsSetRatio(MOTOR_M2, 5000);
-        // motorsSetRatio(MOTOR_M3, 20000);
-        // motorsSetRatio(MOTOR_M4, 45000);
+
       }
 
-#ifdef CONFIG_DECK_USD
-      // Log data to uSD card if configured
-      if (usddeckLoggingEnabled()
-          && usddeckLoggingMode() == usddeckLoggingMode_SynchronousStabilizer
-          && RATE_DO_EXECUTE(usddeckFrequency(), tick)) {
-        usddeckTriggerLogging();
-      }
-#endif
+// #ifdef CONFIG_DECK_USD
+//       // Log data to uSD card if configured
+//       if (usddeckLoggingEnabled()
+//           && usddeckLoggingMode() == usddeckLoggingMode_SynchronousStabilizer
+//           && RATE_DO_EXECUTE(usddeckFrequency(), tick)) {
+//         usddeckTriggerLogging();
+//       }
+// #endif
 
 
 

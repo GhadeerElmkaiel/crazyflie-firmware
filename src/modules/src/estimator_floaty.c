@@ -79,21 +79,26 @@
 #include "statsCnt.h"
 #include "rateSupervisor.h"
 
-// Measurement models
-#include "mm_distance.h"
-#include "mm_absolute_height.h"
-#include "mm_position.h"
-#include "mm_pose.h"
-#include "mm_tdoa.h"
-#include "mm_flow.h"
-#include "mm_tof.h"
-#include "mm_yaw_error.h"
-#include "mm_sweep_angles.h"
+// My measurement models
+#include "floaty_mm_pose.h"
+#include "floaty_gyro.h"
 
-#include "mm_tdoa_robust.h"
-#include "mm_distance_robust.h"
 
-#define DEBUG_MODULE "ESTKALMAN"
+// // Measurement models
+// #include "mm_distance.h"
+// #include "mm_absolute_height.h"
+// #include "mm_position.h"
+// #include "mm_pose.h"
+// #include "mm_tdoa.h"
+// #include "mm_flow.h"
+// #include "mm_tof.h"
+// #include "mm_yaw_error.h"
+// #include "mm_sweep_angles.h"
+
+// #include "mm_tdoa_robust.h"
+// #include "mm_distance_robust.h"
+
+#define DEBUG_MODULE "ESTFLOATY"
 #include "debug.h"
 
 
@@ -133,7 +138,7 @@ static bool robustTdoa = false;
  * For more information, refer to the paper
  */
 
-NO_DMA_CCM_SAFE_ZERO_INIT static kalmanCoreData_t coreData;
+// NO_DMA_CCM_SAFE_ZERO_INIT static kalmanCoreData_t coreData;
 NO_DMA_CCM_SAFE_ZERO_INIT static floatyKalmanCoreData_t floatyCoreData;
 
 /**
@@ -151,7 +156,7 @@ static Axis3f accLatest;
 static Axis3f gyroLatest;
 static bool quadIsFlying = false;
 
-static OutlierFilterLhState_t sweepOutlierFilterState;
+// static OutlierFilterLhState_t sweepOutlierFilterState;
 
 // Indicates that the internal state is corrupt and should be reset
 bool resetFLoatyEstimation = false;
@@ -184,7 +189,7 @@ static void floatyKalmanTask(void* parameters);
 static bool predictFloatyStateForward(uint32_t osTick, float dt);
 static bool updateFloatyQueuedMeasurements(const uint32_t tick);
 
-STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(floatyKalmanTask, KALMAN_TASK_STACKSIZE);
+STATIC_MEM_TASK_ALLOC_STACK_NO_DMA_CCM_SAFE(floatyKalmanTask, FLOATY_KALMAN_TASK_STACKSIZE);
 
 // --------------------------------------------------
 
@@ -196,7 +201,7 @@ void estimatorFloatyKalmanTaskInit() {
 
   dataMutex = xSemaphoreCreateMutexStatic(&dataMutexBuffer);
 
-  STATIC_MEM_TASK_CREATE(floatyKalmanTask, floatyKalmanTask, KALMAN_TASK_NAME, NULL, KALMAN_TASK_PRI);
+  STATIC_MEM_TASK_CREATE(floatyKalmanTask, floatyKalmanTask, FLOATY_KALMAN_TASK_NAME, NULL, FLOATY_KALMAN_TASK_PRI);
 
   isInit = true;
 }
@@ -230,9 +235,9 @@ static void floatyKalmanTask(void* parameters) {
 
     uint32_t osTick = xTaskGetTickCount(); // would be nice if this had a precision higher than 1ms...
 
-  #ifdef KALMAN_DECOUPLE_XY
-    kalmanCoreDecoupleXY(&coreData);
-  #endif
+  // #ifdef KALMAN_DECOUPLE_XY
+  //   kalmanCoreDecoupleXY(&coreData);
+  // #endif
 
     // Run the system dynamics to predict the state forward.
     if (osTick >= nextPrediction) { // update at the PREDICT_RATE
@@ -280,9 +285,9 @@ static void floatyKalmanTask(void* parameters) {
 
     if (doneUpdate)
     {
-      kalmanCoreFinalize(&coreData, osTick);
+      floatyKalmanCoreFinalize(&floatyCoreData, osTick);
       STATS_CNT_RATE_EVENT(&finalizeCounter);
-      if (! kalmanSupervisorIsStateWithinBounds(&coreData)) {
+      if (! floatyKalmanSupervisorIsStateWithinBounds(&floatyCoreData)) {
         resetFLoatyEstimation = true;
 
         if (osTick > warningBlockTime) {
@@ -297,7 +302,7 @@ static void floatyKalmanTask(void* parameters) {
      * This is done every round, since the external state includes some sensor data
      */
     xSemaphoreTake(dataMutex, portMAX_DELAY);
-    moveKalmanCoreData(&coreData, &floatyCoreData);
+    // moveKalmanCoreData(&coreData, &floatyCoreData);
     floatyKalmanCoreExternalizeState(&floatyCoreData, &taskEstimatorState, &accLatest, osTick);
     xSemaphoreGive(dataMutex);
 
@@ -350,8 +355,10 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
   input.flap_2 = flapsAngles.flap_2;
   input.flap_3 = flapsAngles.flap_3;
   input.flap_4 = flapsAngles.flap_4;
-  floatyKalmanCorePredict(&floatyCoreData, &input ,&accAverage, &gyroAverage, dt, quadIsFlying, &coreParams);
+  // floatyKalmanCorePredict(&floatyCoreData, &input ,&accAverage, &gyroAverage, dt, quadIsFlying, &coreParams);
+  floatyKalmanCorePredict(&floatyCoreData, &input, dt, &coreParams);
 
+  floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroAverage);
   return true;
 }
 
@@ -382,6 +389,7 @@ static bool updateFloatyQueuedMeasurements(const uint32_t tick) {
         doneUpdate = true;
         break;
       case MeasurementTypePose:
+        floatyKalmanCoreUpdateWithPose(&floatyCoreData, &m.data.pose);
         // kalmanCoreUpdateWithPose(&coreData, &m.data.pose);        
         doneUpdate = true;
         break;
@@ -457,7 +465,7 @@ void estimatorFloatyKalmanInit(void)
 
   accAccumulatorCount = 0;
   gyroAccumulatorCount = 0;
-  outlierFilterReset(&sweepOutlierFilterState, 0);
+  // outlierFilterReset(&sweepOutlierFilterState, 0);
 
   floatyKalmanCoreInit(&floatyCoreData, &coreParams);
 }

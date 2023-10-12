@@ -57,6 +57,7 @@ such as: take-off, landing, polynomial trajectories.
 #include "commander.h"
 #include "stabilizer_types.h"
 #include "stabilizer.h"
+#include "floaty_params.h"
 
 // Local types
 enum TrajectoryLocation_e {
@@ -296,6 +297,35 @@ int crtpCommanderHighLevelDisable()
 {
   plan_disable(&planner);
   return 0;
+}
+
+bool crtpFloatyCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state, uint32_t tick)
+{
+  if (!RATE_DO_EXECUTE(RATE_HL_COMMANDER, tick)) {
+    return false;
+  }
+  setpoint->position.x = 0;
+  setpoint->position.y = 0;
+  setpoint->position.z = 0;
+
+  setpoint->velocity.x = 0;
+  setpoint->velocity.y = 0;
+  setpoint->velocity.z = 0;
+
+  setpoint->attitude.roll=0;
+  setpoint->attitude.pitch=0;
+  setpoint->attitude.yaw=0;
+
+  setpoint->attitudeRate.roll=0;
+  setpoint->attitudeRate.pitch=0;
+  setpoint->attitudeRate.yaw=0;
+
+  setpoint->flaps.flap_1 = FLAP_1_HOVER_ANGLE;
+  setpoint->flaps.flap_2 = FLAP_2_HOVER_ANGLE;
+  setpoint->flaps.flap_3 = FLAP_3_HOVER_ANGLE;
+  setpoint->flaps.flap_4 = FLAP_4_HOVER_ANGLE;
+
+  return true;
 }
 
 bool crtpCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t *state, uint32_t tick)

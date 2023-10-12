@@ -187,7 +187,7 @@ typedef struct floaty_state_s {
   point_t position;         // m
   velocity_t velocity;      // m/s
   acc_t acc;                // Gs (but acc.z without considering gravity)
-  Axis3f angularRates;      // rad/s
+  attitude_t attitudeRate;      // rad/s
   floaty_control_t flaps;   // rad (I guess it is rad)
 } floaty_state_t;
 
@@ -215,6 +215,7 @@ typedef struct setpoint_s {
   velocity_t velocity;      // m/s
   acc_t acceleration;       // m/s^2
   bool velocity_body;       // true if velocity is given in body frame; false if velocity is given in world frame
+  floaty_control_t flaps;   // rad (I guess it is rad)
 
   struct {
     stab_mode_t x;
@@ -328,6 +329,7 @@ typedef struct
 #define POSITION_RATE RATE_100_HZ
 #define RATE_HL_COMMANDER RATE_100_HZ
 #define SYS_ID_RATE RATE_100_HZ
+#define ESTIMATOR_RATE RATE_100_HZ
 
 #define RATE_DO_EXECUTE(RATE_HZ, TICK) ((TICK % (RATE_MAIN_LOOP / RATE_HZ)) == 0)
 

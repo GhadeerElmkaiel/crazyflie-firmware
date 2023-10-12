@@ -26,6 +26,7 @@
 #pragma once
 
 #include "floaty_kalman_core.h"
+#include "floaty_params.h"
 
 // Direct measurements of Crazyflie pose
-void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasurement_t *pose);
+void floatyKalmanCoreUpdateWithGyro(floatyKalmanCoreData_t* thi_s, Axis3f *gyroscope);

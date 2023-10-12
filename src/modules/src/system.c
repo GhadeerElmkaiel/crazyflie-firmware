@@ -63,6 +63,7 @@
 #include "sound.h"
 #include "sysload.h"
 #include "estimator_kalman.h"
+#include "estimator_floaty.h"
 #include "deck.h"
 #include "extrx.h"
 #include "app.h"
@@ -175,6 +176,11 @@ void systemTask(void *arg)
   ledInit();
   ledSet(CHG_LED, 1);
 
+  ledSet(LED_GREEN_R, 1);
+  vTaskDelay(1500);
+  ledSet(LED_GREEN_R, 0);
+  vTaskDelay(1500);
+
 #ifdef CONFIG_DEBUG_QUEUE_MONITOR
   queueMonitorInit();
 #endif
@@ -192,16 +198,15 @@ void systemTask(void *arg)
   systemInit();
   commInit();
   commanderInit();
+  
 
-  StateEstimatorType estimator = anyEstimator;
+  StateEstimatorType estimator = floatyKalmanEstimator;
 
-  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
-  estimatorKalmanTaskInit();
-  #endif
+  estimatorFloatyKalmanTaskInit();
 
   deckInit();
-  estimator = deckGetRequiredEstimator();
   stabilizerInit(estimator);
+
   if (deckGetRequiredLowInterferenceRadioMode() && platformConfigPhysicalLayoutAntennasAreClose())
   {
     platformSetLowInterferenceRadioMode();
@@ -242,12 +247,18 @@ void systemTask(void *arg)
     DEBUG_PRINT("stabilizer [FAIL]\n");
   }
 
-  #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
-  if (estimatorKalmanTaskTest() == false) {
+  // #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
+  // if (estimatorKalmanTaskTest() == false) {
+  //   pass = false;
+  //   DEBUG_PRINT("estimatorKalmanTask [FAIL]\n");
+  // }
+  // #endif
+  if (estimatorFloatyKalmanTaskTest() == false) {
     pass = false;
-    DEBUG_PRINT("estimatorKalmanTask [FAIL]\n");
+    DEBUG_PRINT("estimatorFloatyKalmanTask [FAIL]\n");
   }
-  #endif
+
+
 
   if (deckTest() == false) {
     pass = false;

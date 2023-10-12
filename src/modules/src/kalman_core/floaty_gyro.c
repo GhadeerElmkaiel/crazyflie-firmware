@@ -23,9 +23,28 @@
  *
  */
 
-#pragma once
+#include "floaty_gyro.h"
+#include "math3d.h"
+float stdGyro = 0.1*_PI/180*2;
 
-#include "floaty_kalman_core.h"
 
-// Direct measurements of Crazyflie pose
-void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasurement_t *pose);
+void floatyKalmanCoreUpdateWithGyro(floatyKalmanCoreData_t* thi_s, Axis3f *gyro)
+{
+  // a direct measurement of states x, y, and z, and orientation
+  // do a scalar update for each state, since this should be faster than updating all together
+  float h[FKC_STATE_DIM] = {0};
+  arm_matrix_instance_f32 H = {1, FKC_STATE_DIM, h};
+
+  h[FKC_STATE_ARX] = 1;
+  floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->x - thi_s->S[FKC_STATE_ARX], stdGyro);
+  h[FKC_STATE_ARX] = 0;
+
+  h[FKC_STATE_ARY] = 1;
+  floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->y - thi_s->S[FKC_STATE_ARY], stdGyro);
+  h[FKC_STATE_ARY] = 0;
+
+  h[FKC_STATE_ARZ] = 1;
+  floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->z - thi_s->S[FKC_STATE_ARZ], stdGyro);
+  h[FKC_STATE_ARZ] = 0;
+
+}

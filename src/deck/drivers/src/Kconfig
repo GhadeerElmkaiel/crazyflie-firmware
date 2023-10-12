@@ -162,7 +162,7 @@ config DECK_LEDRING_DIMMER
 
 config DECK_LIGHTHOUSE
     bool "Support the Lighthouse positioning deck"
-    default y
+    default n
     depends on !DEBUG_PRINT_ON_UART1
     select ESTIMATOR_KALMAN_ENABLE
     help

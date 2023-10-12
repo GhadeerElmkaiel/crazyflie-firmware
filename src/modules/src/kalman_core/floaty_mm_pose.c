@@ -26,37 +26,36 @@
 #include "floaty_mm_pose.h"
 #include "math3d.h"
 
-void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* this, poseMeasurement_t *pose)
+void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasurement_t *pose)
 {
-  // // a direct measurement of states x, y, and z, and orientation
-  // // do a scalar update for each state, since this should be faster than updating all together
-  // for (int i=0; i<3; i++) {
-  //   float h[KC_STATE_DIM] = {0};
-  //   arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-  //   h[KC_STATE_X+i] = 1;
-  //   kalmanCoreScalarUpdate(this, &H, pose->pos[i] - this->S[KC_STATE_X+i], pose->stdDevPos);
-  // }
+  // a direct measurement of states x, y, and z, and orientation
+  // do a scalar update for each state, since this should be faster than updating all together
+  float h[FKC_STATE_DIM] = {0};
+  arm_matrix_instance_f32 H = {1, FKC_STATE_DIM, h};
 
-  // // compute orientation error
-  // struct quat const q_ekf = mkquat(this->q[1], this->q[2], this->q[3], this->q[0]);
-  // struct quat const q_measured = mkquat(pose->quat.x, pose->quat.y, pose->quat.z, pose->quat.w);
-  // struct quat const q_residual = qqmul(qinv(q_ekf), q_measured);
-  // // small angle approximation, see eq. 141 in http://mars.cs.umn.edu/tr/reports/Trawny05b.pdf
-  // struct vec const err_quat = vscl(2.0f / q_residual.w, quatimagpart(q_residual));
+  for (int i=0; i<3; i++) {
+    h[FKC_STATE_X+i] = 1;
+    floatyKalmanCoreScalarUpdate(thi_s, &H, pose->pos[i] - thi_s->S[FKC_STATE_X+i], pose->stdDevPos);
+    h[FKC_STATE_X+i] = 0;
+  }
 
-  // // do a scalar update for each state
-  // {
-  //   float h[KC_STATE_DIM] = {0};
-  //   arm_matrix_instance_f32 H = {1, KC_STATE_DIM, h};
-  //   h[KC_STATE_D0] = 1;
-  //   kalmanCoreScalarUpdate(this, &H, err_quat.x, pose->stdDevQuat);
-  //   h[KC_STATE_D0] = 0;
+  // float h[FKC_STATE_DIM] = {0};
+  // arm_matrix_instance_f32 H = {1, FKC_STATE_DIM, h};
+  h[FKC_STATE_Q0] = 1;
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.q0 - thi_s->S[FKC_STATE_Q0], pose->stdDevQuat);
 
-  //   h[KC_STATE_D1] = 1;
-  //   kalmanCoreScalarUpdate(this, &H, err_quat.y, pose->stdDevQuat);
-  //   h[KC_STATE_D1] = 0;
+  h[FKC_STATE_Q0] = 0;
+  h[FKC_STATE_Q1] = 1;
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.q1 - thi_s->S[FKC_STATE_Q1], pose->stdDevQuat);
 
-  //   h[KC_STATE_D2] = 1;
-  //   kalmanCoreScalarUpdate(this, &H, err_quat.z, pose->stdDevQuat);
-  // }
+  h[FKC_STATE_Q1] = 0;
+  h[FKC_STATE_Q2] = 1;
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.q2 - thi_s->S[FKC_STATE_Q2], pose->stdDevQuat);
+
+  h[FKC_STATE_Q2] = 0;
+  h[FKC_STATE_Q3] = 1;
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.q3 - thi_s->S[FKC_STATE_Q3], pose->stdDevQuat);
+  
+  h[FKC_STATE_Q3] = 0;
+
 }

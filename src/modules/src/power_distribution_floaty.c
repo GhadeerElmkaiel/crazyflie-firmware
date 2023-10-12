@@ -41,6 +41,13 @@
 #  define DEFAULT_IDLE_THRUST CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #endif
 
+
+static int16_t motShift1 = 550;
+static int16_t motShift2 = -5200;
+static int16_t motShift3 = 5200;
+static int16_t motShift4 = 4200;
+
+
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 
 void powerDistributionInit(void)
@@ -57,61 +64,15 @@ bool powerDistributionTest(void)
 
 void powerDistribution(motors_thrust_t* motorPower, const floaty_control_t *control)
 {
-  // int16_t r = control->roll / 2.0f;
-  // int16_t p = control->pitch / 2.0f;
+  // Here, we transfer the flap angles that we get from the range [-60,60] to the PWM signal
+  // which is 0-65535. Additionally, we count for the shift in each motor mid point.
+  // The angles that we get are in rad, so we scale the range [-pi/3,pi/3] to the range 0-65535 
+  // and add the shift value for each motor
+  motorPower->m1 = limitThrust((control->flap_1)*RAD_TO_PWM + PWM_MID_VALUE + motShift1);
+  motorPower->m2 = limitThrust((control->flap_2)*RAD_TO_PWM + PWM_MID_VALUE + motShift2);
+  motorPower->m3 = limitThrust((control->flap_3)*RAD_TO_PWM + PWM_MID_VALUE + motShift3);
+  motorPower->m4 = limitThrust((control->flap_4)*RAD_TO_PWM + PWM_MID_VALUE + motShift4);
 
-  // -------------------------------
-  // DEBUG_PRINT("Roll and Pitch");
-  // DEBUG_PRINT(std::to_string(r));
-  // DEBUG_PRINT(std::to_string(p));
-  // DEBUG_PRINT((double)(control->thrust));
-  // -------------------------------
-
-
-  // motorPower->m1 = limitThrust(control->thrust - r + p + control->yaw);
-  // motorPower->m2 = limitThrust(control->thrust - r - p - control->yaw);
-  // motorPower->m3 =  limitThrust(control->thrust + r - p + control->yaw);
-  // motorPower->m4 =  limitThrust(control->thrust + r + p - control->yaw);
-  
-  
-  motorPower->m1 = limitThrust(control->flap_1);
-  motorPower->m2 = limitThrust(control->flap_2);
-  motorPower->m3 = limitThrust(control->flap_3);
-  motorPower->m4 = limitThrust(control->flap_4);
-
-  // if(startLoop==1){
-  //   motorPower->m1 = limitThrust(control->roll);
-  //   motorPower->m2 = limitThrust(control->pitch);
-  //   motorPower->m3 = limitThrust(control->thrust);
-  //   motorPower->m4 = limitThrust(control->yaw);
-  // }
-  // if(startLoop==0){
-  //   motorPower->m1 = limitThrust(1000);
-  //   motorPower->m2 = limitThrust(1000);
-  //   motorPower->m3 = limitThrust(1000);
-  //   motorPower->m4 = limitThrust(1000);
-  //   loop_was_on = 0
-  // }
-  // if(startLoop==2){
-  //   motorPower->m1 = limitThrust(32767);
-  //   motorPower->m2 = limitThrust(32767);
-  //   motorPower->m3 = limitThrust(32767);
-  //   motorPower->m4 = limitThrust(32767);
-  // }
-
-
-  // if (motorPower->m1 < idleThrust) {
-  //   motorPower->m1 = idleThrust;
-  // }
-  // if (motorPower->m2 < idleThrust) {
-  //   motorPower->m2 = idleThrust;
-  // }
-  // if (motorPower->m3 < idleThrust) {
-  //   motorPower->m3 = idleThrust;
-  // }
-  // if (motorPower->m4 < idleThrust) {
-  //   motorPower->m4 = idleThrust;
-  // }
 }
 
 /**
@@ -127,3 +88,29 @@ PARAM_GROUP_START(powerDist)
  */
 PARAM_ADD_CORE(PARAM_UINT32 | PARAM_PERSISTENT, idleThrust, &idleThrust)
 PARAM_GROUP_STOP(powerDist)
+
+
+/**
+ * External motor control parameters
+ */
+PARAM_GROUP_START(motorShifts)
+
+/**
+ * @brief Shift in PWM of motor 1 (default: 0)
+ */
+PARAM_ADD_CORE(PARAM_INT16, motShift1, &motShift1)
+/**
+ * @brief Shift in PWM of motor 2 (default: 0)
+ */
+PARAM_ADD_CORE(PARAM_INT16, motShift2, &motShift2)
+/**
+ * @brief Shift in PWM of motor 3 (default: 0)
+ */
+PARAM_ADD_CORE(PARAM_INT16, motShift3, &motShift3)
+/**
+ * @brief Shift in PWM of motor 4 (default: 0)
+ */
+PARAM_ADD_CORE(PARAM_INT16, motShift4, &motShift4)
+
+PARAM_GROUP_STOP(motorShifts)
+

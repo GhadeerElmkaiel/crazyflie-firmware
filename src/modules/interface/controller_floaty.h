@@ -28,11 +28,16 @@
 
 #include "stabilizer_types.h"
 
+typedef enum
+{
+  F_ERR_X, F_ERR_Y, F_ERR_Z, F_ERR_PX, F_ERR_PY, F_ERR_PZ, F_ERR_ROLL, F_ERR_PITCH, F_ERR_YAW, F_ERR_ARX, F_ERR_ARY, F_ERR_ARZ, F_ERR_F1, F_ERR_F2, F_ERR_F3, F_ERR_F4, F_ERR_DIM
+} floatyControlStateErrorIdx_t;
+
 void controllerFloatyInit(void);
 bool controllerFloatyTest(void);
 void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
-                                         const state_t *state,
+                                         const floaty_state_t *state,
                                          const uint32_t tick);
 
 #endif //__CONTROLLER_FLOATY_H__

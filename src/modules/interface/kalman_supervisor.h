@@ -28,5 +28,8 @@
 
 #include <stdbool.h>
 #include "kalman_core.h"
+#include "floaty_kalman_core.h"
 
 bool kalmanSupervisorIsStateWithinBounds(const kalmanCoreData_t* this);
+
+bool floatyKalmanSupervisorIsStateWithinBounds(const floatyKalmanCoreData_t* this);

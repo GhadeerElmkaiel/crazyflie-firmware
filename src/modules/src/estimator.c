@@ -15,8 +15,9 @@
 #include "eventtrigger.h"
 #include "quatcompress.h"
 
-#define DEFAULT_ESTIMATOR complementaryEstimator
-static StateEstimatorType currentEstimator = anyEstimator;
+// #define DEFAULT_ESTIMATOR complementaryEstimator
+#define DEFAULT_ESTIMATOR floatyKalmanEstimator
+static StateEstimatorType currentEstimator = floatyKalmanEstimator;
 
 
 #define MEASUREMENTS_QUEUE_SIZE (20)
@@ -49,9 +50,18 @@ typedef struct {
   void (*init)(void);
   void (*deinit)(void);
   bool (*test)(void);
-  void (*update)(state_t *state, const uint32_t tick);
+  void (*update)(floaty_state_t *state, const uint32_t tick);
   const char* name;
 } EstimatorFcns;
+
+// Old implementation
+// typedef struct {
+//   void (*init)(void);
+//   void (*deinit)(void);
+//   bool (*test)(void);
+//   void (*update)(state_t *state, const uint32_t tick);
+//   const char* name;
+// } EstimatorFcns;
 
 typedef struct {
   void (*init)(void);
@@ -71,34 +81,31 @@ static EstimatorFcns estimatorFunctions[] = {
         .update = NOT_IMPLEMENTED,
         .name = "None",
     }, // Any estimator
-    {
-        .init = estimatorComplementaryInit,
-        .deinit = NOT_IMPLEMENTED,
-        .test = estimatorComplementaryTest,
-        .update = estimatorComplementary,
-        .name = "Complementary",
-    },
-#ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
-    {
-        .init = estimatorKalmanInit,
-        .deinit = NOT_IMPLEMENTED,
-        .test = estimatorKalmanTest,
-        .update = estimatorKalman,
-        .name = "Kalman",
-    },
-#endif
-#ifdef CONFIG_ESTIMATOR_OOT
-    {
-        .init = estimatorOutOfTreeInit,
-        .deinit = NOT_IMPLEMENTED,
-        .test = estimatorOutOfTreeTest,
-        .update = estimatorOutOfTree,
-        .name = "OutOfTree",
-    },
-#endif
-};
-
-static FloatyEstimatorFcns floatyEstimatorFunctions[] = {
+//     {
+//         .init = estimatorComplementaryInit,
+//         .deinit = NOT_IMPLEMENTED,
+//         .test = estimatorComplementaryTest,
+//         .update = estimatorComplementary,
+//         .name = "Complementary",
+//     },
+// #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
+//     {
+//         .init = estimatorKalmanInit,
+//         .deinit = NOT_IMPLEMENTED,
+//         .test = estimatorKalmanTest,
+//         .update = estimatorKalman,
+//         .name = "Kalman",
+//     },
+// #endif
+// #ifdef CONFIG_ESTIMATOR_OOT
+//     {
+//         .init = estimatorOutOfTreeInit,
+//         .deinit = NOT_IMPLEMENTED,
+//         .test = estimatorOutOfTreeTest,
+//         .update = estimatorOutOfTree,
+//         .name = "OutOfTree",
+//     },
+// #endif
     {
         .init = estimatorFloatyKalmanInit,
         .deinit = NOT_IMPLEMENTED,
@@ -107,6 +114,16 @@ static FloatyEstimatorFcns floatyEstimatorFunctions[] = {
         .name = "Floaty",
     },
 };
+
+// static FloatyEstimatorFcns floatyEstimatorFunctions[] = {
+//     {
+//         .init = estimatorFloatyKalmanInit,
+//         .deinit = NOT_IMPLEMENTED,
+//         .test = estimatorFloatyKalmanTest,
+//         .update = estimatorFloatyKalman,
+//         .name = "Floaty",
+//     },
+// };
 
 void stateEstimatorInit(StateEstimatorType estimator) {
   measurementsQueue = STATIC_MEM_QUEUE_CREATE(measurementsQueue);
@@ -129,7 +146,8 @@ void stateEstimatorSwitchTo(StateEstimatorType estimator) {
   #elif defined(CONFIG_ESTIMATOR_COMPLEMENTARY)
     #define ESTIMATOR complementaryEstimator
   #else
-    #define ESTIMATOR anyEstimator
+    // #define ESTIMATOR anyEstimator
+    #define ESTIMATOR floatyKalmanEstimator
   #endif
 
   StateEstimatorType forcedEstimator = ESTIMATOR;
@@ -166,14 +184,19 @@ bool stateEstimatorTest(void) {
   return estimatorFunctions[currentEstimator].test();
 }
 
-void stateEstimator(state_t *state, const uint32_t tick) {
+void stateEstimator(floaty_state_t *state, const uint32_t tick) {
   estimatorFunctions[currentEstimator].update(state, tick);
 }
 
+// The old state estimator function which uses the CF state
+// void stateEstimator(state_t *state, const uint32_t tick) {
+//   estimatorFunctions[currentEstimator].update(state, tick);
+// }
 
-void floatyStateEstimator(floaty_state_t *floaty_state, const uint32_t tick) {
-  floatyEstimatorFunctions[floatyKalmanEstimator].update(floaty_state, tick);
-}
+
+// void floatyStateEstimator(floaty_state_t *floaty_state, const uint32_t tick) {
+//   floatyEstimatorFunctions[floatyKalmanEstimator].update(floaty_state, tick);
+// }
 
 const char* stateEstimatorGetName() {
   return estimatorFunctions[currentEstimator].name;

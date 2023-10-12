@@ -28,6 +28,10 @@
 
 #include "stabilizer_types.h"
 
+#  define PWM_MID_VALUE 32767
+#  define MAX_PWM_SIGNAL 65535
+#  define PI 3.1416
+#  define RAD_TO_PWM 31290 // Equal to 3/(PI*2) *65535   // 120 degrees is the max PWM signal
 
 void powerDistributionInit(void);
 bool powerDistributionTest(void);

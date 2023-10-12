@@ -41,7 +41,7 @@ void controllerInit(ControllerType controller);
 bool controllerTest(void);
 void controller(floaty_control_t *control, setpoint_t *setpoint,
                                          const sensorData_t *sensors,
-                                         const state_t *state,
+                                         const floaty_state_t *state,
                                          const uint32_t tick);
 ControllerType getControllerType(void);
 const char* controllerGetName();

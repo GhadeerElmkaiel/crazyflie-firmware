@@ -30,21 +30,22 @@
 
 typedef enum {
   anyEstimator = 0,
-  complementaryEstimator,
-#ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
-  kalmanEstimator,
-#endif
-#ifdef CONFIG_ESTIMATOR_OOT
-  OutOfTreeEstimator,
-#endif
+//   complementaryEstimator,
+// #ifdef CONFIG_ESTIMATOR_KALMAN_ENABLE
+//   kalmanEstimator,
+// #endif
+// #ifdef CONFIG_ESTIMATOR_OOT
+//   OutOfTreeEstimator,
+// #endif
+  floatyKalmanEstimator,
   StateEstimatorTypeCount,
 } StateEstimatorType;
 
 
-typedef enum {
-  floatyKalmanEstimator =0,
-  FloatyStateEstimatorTypeCount,
-} FloatyStateEstimatorType;
+// typedef enum {
+//   floatyKalmanEstimator =0,
+//   FloatyStateEstimatorTypeCount,
+// } FloatyStateEstimatorType;
 
 typedef enum {
   MeasurementTypeTDOA,
@@ -111,8 +112,11 @@ typedef struct
 void stateEstimatorInit(StateEstimatorType estimator);
 bool stateEstimatorTest(void);
 void stateEstimatorSwitchTo(StateEstimatorType estimator);
-void stateEstimator(state_t *state, const uint32_t tick);
-void floatyStateEstimator(floaty_state_t *floaty_state, const uint32_t tick);
+
+void stateEstimator(floaty_state_t *state, const uint32_t tick);
+// void stateEstimator(state_t *state, const uint32_t tick);
+// void floatyStateEstimator(floaty_state_t *floaty_state, const uint32_t tick);
+
 StateEstimatorType getStateEstimator(void);
 const char* stateEstimatorGetName();
 

@@ -73,7 +73,7 @@ bool controllerTest(void) {
   return controllerFloatyTest();
 }
 
-void controller(floaty_control_t *control, setpoint_t *setpoint, const sensorData_t *sensors, const state_t *state, const uint32_t tick) {
+void controller(floaty_control_t *control, setpoint_t *setpoint, const sensorData_t *sensors, const floaty_state_t *state, const uint32_t tick) {
   // Forcing the use of Floaty controller
   // controllerFunctions[currentController].update(control, setpoint, sensors, state, tick);
   controllerFloaty(control, setpoint, sensors, state, tick);

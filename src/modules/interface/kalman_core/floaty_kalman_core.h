@@ -140,6 +140,8 @@ typedef struct {
 
 // The parameters used by the filter
 typedef struct {
+  // The velocity of the floaty in the body frame
+  Axis3f vFloatyBodyFrame;
   // The velocity of the air in the body frame
   Axis3f vAirBodyFrame;
   // The center of pressure for the four flaps in Body frame
@@ -155,12 +157,12 @@ typedef struct {
 void floatyKalmanCoreDefaultParams(floatyKalmanCoreParams_t *params);
 
 /*  - Initialize Kalman State */
-void floatyKalmanCoreInit(floatyKalmanCoreData_t *this, const floatyKalmanCoreParams_t *params);
+void floatyKalmanCoreInit(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreParams_t *params);
 
 /*  - Measurement updates based on sensors */
 
 // Barometer
-void floatyKalmanCoreUpdateWithBaro(floatyKalmanCoreData_t *this, const floatyKalmanCoreParams_t *params, float baroAsl, bool quadIsFlying);
+void floatyKalmanCoreUpdateWithBaro(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreParams_t *params, float baroAsl, bool quadIsFlying);
 
 /*
  * A function to calculate the aerodynamic force and torque vectors
@@ -173,7 +175,7 @@ void floatyKalmanCoreUpdateWithBaro(floatyKalmanCoreData_t *this, const floatyKa
 void floatyKalmanCalculateAerodynamicForceAndTorque(float S[FKC_STATE_DIM], float R[3][3], float R_F_B[4][3][3], Axis3f* aerodynamicForce, Axis3f* aerodynamicTorque, floatyAerodynamicsParams_t* calcParameters, arm_matrix_instance_f32* H);
 
 // Calculate the parameters used multiple times in the A matrix
-void floatyKalmanAerodynamicsParamsCalculation(floatyKalmanCoreData_t *this, floatyAerodynamicsParams_t *params);
+void floatyKalmanAerodynamicsParamsCalculation(floatyKalmanCoreData_t *coreData, floatyAerodynamicsParams_t *params);
 
 // A function to calculate the state derivative using the current state and the input
 void floatyKalmanCalculateStateDerivative(float state[FKC_STATE_DIM], floaty_control_t* input, Axis3f* aerodynamicForce, Axis3f* aerodynamicTorque, float stateDerivative[FKC_STATE_DIM]);
@@ -182,33 +184,35 @@ void floatyKalmanCalculateStateDerivative(float state[FKC_STATE_DIM], floaty_con
  *
  * The filter progresses as:
  *  - Predicting the current state forward */
-void floatyKalmanCorePredict(floatyKalmanCoreData_t *this, floaty_control_t* input, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying, const floatyKalmanCoreParams_t *params);
+// void floatyKalmanCorePredict(floatyKalmanCoreData_t *coreData, floaty_control_t* input, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying, const floatyKalmanCoreParams_t *params);
+void floatyKalmanCorePredict(floatyKalmanCoreData_t *coreData, floaty_control_t* input, float dt, const floatyKalmanCoreParams_t *params);
 
-void floatyKalmanCoreAddProcessNoise(floatyKalmanCoreData_t *this, const floatyKalmanCoreParams_t *params, float dt);
+// void floatyKalmanCoreAddProcessNoise(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreParams_t *params, float dt);
 
 /*  - Finalization to incorporate attitude error into body attitude */
-void floatyKalmanCoreFinalize(floatyKalmanCoreData_t* this, uint32_t tick);
+void floatyKalmanCoreFinalize(floatyKalmanCoreData_t* coreData, uint32_t tick);
 
 
-// void kalmanCoreDecoupleXY(kalmanCoreData_t* this);
+// void kalmanCoreDecoupleXY(kalmanCoreData_t* thi_s);
 
-void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise);
-
-// void kalmanCoreUpdateWithPKE(kalmanCoreData_t* this, arm_matrix_instance_f32 *Hm, arm_matrix_instance_f32 *Km, arm_matrix_instance_f32 *P_w_m, float error);
+void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* coreData, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise);
 
 // My functions
 /*  - Externalization to move the filter's internal state into the external state expected by other modules */
-void floatyKalmanCoreExternalizeState(const floatyKalmanCoreData_t* this, floaty_state_t *state, const Axis3f *acc, uint32_t tick);
+void floatyKalmanCoreExternalizeState(const floatyKalmanCoreData_t* coreData, floaty_state_t *state, const Axis3f *acc, uint32_t tick);
 
-void moveKalmanCoreData(kalmanCoreData_t* coreData, floatyKalmanCoreData_t* floatyCoreData);
+// void moveKalmanCoreData(kalmanCoreData_t* coreData, floatyKalmanCoreData_t* floatyCoreData);
 
 // A function to update the rotation matrices and the quaternion
-void updateRotationMatrices(floatyKalmanCoreData_t* this);
+void updateRotationMatrices(floatyKalmanCoreData_t* coreData);
 
 // A function to Calculate a rotation matrix using quaternion
 void updateBodyRotationMatrixWithQuatValues(float R[3][3], quaternion_t* q);
 
 // A function to Calculate a flap matrix using flap angle and id
 void updateFlapRotationMatrixWithPhyValues(float R[3][3], float phy, int flap_id);
+
+// A function to normalize the quaternion in the state
+void floatyNormalizeQuat(floatyKalmanCoreData_t* coreData);
 
 #endif
