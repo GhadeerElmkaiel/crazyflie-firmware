@@ -1,16 +1,16 @@
 #pragma once
 
 // extern const float flapHoverAngle = 0.6146;
-extern float flapHoverAngle;
+extern float flapHoverAng;
 
 // #define FLAP_1_HOVER_ANGLE 0.610865
 // #define FLAP_2_HOVER_ANGLE -0.610865
 // #define FLAP_3_HOVER_ANGLE 0.610865
 // #define FLAP_4_HOVER_ANGLE -0.610865
-#define FLAP_1_HOVER_ANGLE flapHoverAngle
-#define FLAP_2_HOVER_ANGLE -flapHoverAngle
-#define FLAP_3_HOVER_ANGLE flapHoverAngle
-#define FLAP_4_HOVER_ANGLE -flapHoverAngle
+#define FLAP_1_HOVER_ANGLE flapHoverAng
+#define FLAP_2_HOVER_ANGLE -flapHoverAng
+#define FLAP_3_HOVER_ANGLE flapHoverAng
+#define FLAP_4_HOVER_ANGLE -flapHoverAng
 #define _PI 3.14159
 
 // The specification says that it has a noise of 0.1 degrees.

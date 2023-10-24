@@ -77,12 +77,13 @@ static bool canFlyCheck()
 //
 static bool isFlyingCheck()
 {
-  int sumRatio = 0;
-  for (int i = 0; i < NBR_OF_MOTORS; ++i) {
-    sumRatio += motorsGetRatio(i);
-  }
+  // int sumRatio = 0;
+  // for (int i = 0; i < NBR_OF_MOTORS; ++i) {
+  //   sumRatio += motorsGetRatio(i);
+  // }
 
-  return sumRatio > SUPERVISOR_FLIGHT_THRESHOLD;
+  // return sumRatio > SUPERVISOR_FLIGHT_THRESHOLD;
+  return true;
 }
 
 //

@@ -83,9 +83,9 @@
 #define ROLLPITCH_ZERO_REVERSION (0.001f)
 #endif
 
-static uint8_t useOptimizedKalmanCalcs = 0;
+static uint8_t useOptCalcs = 0;
 
-float flapHoverAngle = 0.6146;
+float flapHoverAng = 0.6146;
 
 float rhoCd_2 = 0.735;
 float dCpValue = 0.065;
@@ -96,8 +96,8 @@ float airflowSpeed = 8.1;
 float gravityAcc = 9.81;
 float flapTimeConst = 10;
 const float inertialMatrixDiag[3] = {0.000943, 0.000943, 0.0019};
-// float inertialMatrixInvDiag[3] = {1060, 1060, 530};
-float inertialMatrixInvDiag[3] = {1/inertialMatrixDiag[0], 1/inertialMatrixDiag[1], 1/inertialMatrixDiag[2]};
+float inertialMatrixInvDiag[3] = {1060, 1060, 530};
+// float inertialMatrixInvDiag[3] = {1/inertialMatrixDiag[0], 1/inertialMatrixDiag[1], 1/inertialMatrixDiag[2]};
 float flapPositionAngles[4] = {-_PI/4, _PI/4, 3*_PI/4, -3*_PI/4};
 float dCpShiftPerpConsts[4] = {0.0037, -0.0105, 0.0063, -0.0311};
 float dCpShiftAxialConsts[3] = {-0.0035, 0.0014, 0.0058};
@@ -235,7 +235,7 @@ void floatyKalmanCoreInit(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreP
   for(int i=0; i<3; i++) { for(int j=0; j<3; j++) { thi_s->R[i][j] = i==j ? 1 : 0; }}
 
   // Calculate the initial rotation matrices from flap farmes to the body frame
-  float phy = flapHoverAngle;
+  float phy = flapHoverAng;
   for(int i=0; i<4; i++){
     // float phy = thi_s->S[FKC_STATE_F1+i];
     float theta = flapPositionAngles[i];
@@ -785,7 +785,7 @@ void floatyKalmanCalculateAerodynamicForceAndTorque(float S[FKC_STATE_DIM], floa
   float flapsForceValues[4] = {0};
 
   // Here I calculate the velocity of the body in the all three directions direction of the body frame as it is needed
-  if(useOptimizedKalmanCalcs>0){
+  if(useOptCalcs>0){
     // Here I need to add to the condition that Floaty's rotation or velocity didn't change
     vFloatyBodyFrame.x = calcParameters->vFloatyBodyFrame.x;
     vFloatyBodyFrame.y = calcParameters->vFloatyBodyFrame.y;
@@ -825,7 +825,7 @@ void floatyKalmanCalculateAerodynamicForceAndTorque(float S[FKC_STATE_DIM], floa
     float dCpShiftPerp = multip_val*(dCpShiftPerpConsts[0] + dCpShiftPerpConsts[1]*phy + dCpShiftPerpConsts[2]*phy2 + dCpShiftPerpConsts[3]*phy3);
     float dCpShiftAxial = dCpValue + dCpShiftAxialConsts[0]*phy + dCpShiftAxialConsts[1]*phy2 + dCpShiftAxialConsts[2]*phy3;
 
-    if(useOptimizedKalmanCalcs>0){
+    if(useOptCalcs>0){
       // TODO
       // I need to implement the different cases were I only do the needed calculations using the flag
       // vector H to know what calculations to redo and what I can use as it is.
@@ -1149,7 +1149,7 @@ void floatyKalmanCoreExternalizeState(const floatyKalmanCoreData_t* thi_s, float
 /**
  * Parameters for aerodynamic calculations
  */
-PARAM_GROUP_START(floatyConsts)
+PARAM_GROUP_START(RandConsts)
 /**
  * @brief Constants for aerodynamics calculations
  */
@@ -1160,9 +1160,9 @@ PARAM_GROUP_START(floatyConsts)
   PARAM_ADD_CORE(PARAM_FLOAT, mass, &mass)
   PARAM_ADD_CORE(PARAM_FLOAT, airflowSpeed, &airflowSpeed)
   PARAM_ADD_CORE(PARAM_FLOAT, gravityAcc, &gravityAcc)
-  PARAM_ADD_CORE(PARAM_FLOAT, flapHoverAngle, &flapHoverAngle)
+  PARAM_ADD_CORE(PARAM_FLOAT, flapHoverAng, &flapHoverAng)
   PARAM_ADD_CORE(PARAM_FLOAT, flapTimeConst, &flapTimeConst)
 
-  PARAM_ADD_CORE(PARAM_UINT8, useOptimizedKalmanCalcs, &useOptimizedKalmanCalcs)
+  PARAM_ADD_CORE(PARAM_UINT8, useOptCalcs, &useOptCalcs)
   
-PARAM_GROUP_STOP(floatyConsts)
+PARAM_GROUP_STOP(RandConsts)

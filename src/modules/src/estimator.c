@@ -15,6 +15,8 @@
 #include "eventtrigger.h"
 #include "quatcompress.h"
 
+// #include "led.h"
+
 // #define DEFAULT_ESTIMATOR complementaryEstimator
 #define DEFAULT_ESTIMATOR floatyKalmanEstimator
 static StateEstimatorType currentEstimator = floatyKalmanEstimator;
@@ -169,6 +171,7 @@ StateEstimatorType getStateEstimator(void) {
 }
 
 static void initEstimator(const StateEstimatorType estimator) {
+
   if (estimatorFunctions[estimator].init) {
     estimatorFunctions[estimator].init();
   }

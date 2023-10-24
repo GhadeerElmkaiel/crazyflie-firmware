@@ -172,14 +172,10 @@ bool systemTest()
 void systemTask(void *arg)
 {
   bool pass = true;
-
+  
   ledInit();
   ledSet(CHG_LED, 1);
 
-  ledSet(LED_GREEN_R, 1);
-  vTaskDelay(1500);
-  ledSet(LED_GREEN_R, 0);
-  vTaskDelay(1500);
 
 #ifdef CONFIG_DEBUG_QUEUE_MONITOR
   queueMonitorInit();
@@ -211,7 +207,6 @@ void systemTask(void *arg)
   {
     platformSetLowInterferenceRadioMode();
   }
-  soundInit();
   memInit();
 
 #ifdef PROXIMITY_ENABLED
@@ -264,10 +259,10 @@ void systemTask(void *arg)
     pass = false;
     DEBUG_PRINT("deck [FAIL]\n");
   }
-  if (soundTest() == false) {
-    pass = false;
-    DEBUG_PRINT("sound [FAIL]\n");
-  }
+  // if (soundTest() == false) {
+  //   pass = false;
+  //   DEBUG_PRINT("sound [FAIL]\n");
+  // }
   if (memTest() == false) {
     pass = false;
     DEBUG_PRINT("mem [FAIL]\n");
@@ -320,7 +315,7 @@ void systemTask(void *arg)
     }
   }
   DEBUG_PRINT("Free heap: %d bytes\n", xPortGetFreeHeapSize());
-
+  
   workerLoop();
 
   //Should never reach this point!

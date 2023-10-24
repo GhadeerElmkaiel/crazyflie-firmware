@@ -1,0 +1,24 @@
+build/app_api/.built-in.o.cmd:cmd_app_api/built-in.o :=  rm -f app_api/built-in.o; arm-none-eabi-ar rcsD app_api/built-in.o
+build/floaty.map:LOAD app_api/built-in.o
+build/.firmware.cmd:cmd_firmware := arm-none-eabi-gcc -Wl,-Map=floaty.map,--cref,--gc-sections,--undefined=uxTopUsedPriority -L../tools/make/F405/linker -T ../tools/make/F405/linker/FLASH_CLOAD.ld --specs=nosys.specs --specs=nano.specs -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostdlib src/built-in.o vendor/built-in.o app_api/built-in.o  -lm -o firmware.elf
+build/include/config/auto.conf.cmd:	app_api/Kconfig \
+examples/app_test/build/app_api/.built-in.o.cmd:cmd_app_api/built-in.o :=  rm -f app_api/built-in.o; arm-none-eabi-ar rcsD app_api/built-in.o
+examples/app_test/build/cf2.map:LOAD app_api/built-in.o
+examples/app_test/build/.firmware.cmd:cmd_firmware := arm-none-eabi-g++ -Wl,-Map=cf2.map,--cref,--gc-sections,--undefined=uxTopUsedPriority -L/home/gelmkaiel/Floaty/packages/crazyflie/crazyflie-firmware/tools/make/F405/linker -T /home/gelmkaiel/Floaty/packages/crazyflie/crazyflie-firmware/tools/make/F405/linker/FLASH_CLOAD.ld --specs=nosys.specs --specs=nano.specs -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostdlib src/built-in.o vendor/built-in.o app_api/built-in.o /home/gelmkaiel/Floaty/packages/crazyflie/crazyflie-firmware/examples/app_test/built-in.o  -lstdc++ -lm -o firmware.elf
+examples/app_test/build/include/config/auto.conf.cmd:	app_api/Kconfig \
+examples/app_hello_file_tree/build/cf2.map:LOAD app_api/built-in.o
+examples/app_hello_file_tree/build/include/config/auto.conf.cmd:	app_api/Kconfig \
+examples/app_hello_world-cpp/build/app_api/.built-in.o.cmd:cmd_app_api/built-in.o :=  rm -f app_api/built-in.o; arm-none-eabi-ar rcsD app_api/built-in.o
+examples/app_hello_world-cpp/build/cf2.map:LOAD app_api/built-in.o
+examples/app_hello_world-cpp/build/.firmware.cmd:cmd_firmware := arm-none-eabi-g++ -Wl,-Map=cf2.map,--cref,--gc-sections,--undefined=uxTopUsedPriority -L/home/gelmkaiel/Floaty/packages/crazyflie/crazyflie-firmware/tools/make/F405/linker -T /home/gelmkaiel/Floaty/packages/crazyflie/crazyflie-firmware/tools/make/F405/linker/FLASH_CLOAD.ld --specs=nosys.specs --specs=nano.specs -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostdlib src/built-in.o vendor/built-in.o app_api/built-in.o /home/gelmkaiel/Floaty/packages/crazyflie/crazyflie-firmware/examples/app_hello_world-cpp/built-in.o  -lstdc++ -lm -o firmware.elf
+examples/app_hello_world-cpp/build/include/config/auto.conf.cmd:	app_api/Kconfig \
+examples/app_hello_world/build/app_api/.built-in.o.cmd:cmd_app_api/built-in.o :=  rm -f app_api/built-in.o; arm-none-eabi-ar rcsD app_api/built-in.o
+examples/app_hello_world/build/cf2.map:LOAD app_api/built-in.o
+examples/app_hello_world/build/.firmware.cmd:cmd_firmware := arm-none-eabi-gcc -Wl,-Map=cf2.map,--cref,--gc-sections,--undefined=uxTopUsedPriority -L/home/gelmkaiel/Floaty/packages/crazyflie/crazyflie-firmware/tools/make/F405/linker -T /home/gelmkaiel/Floaty/packages/crazyflie/crazyflie-firmware/tools/make/F405/linker/FLASH_CLOAD.ld --specs=nosys.specs --specs=nano.specs -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 -nostdlib src/built-in.o vendor/built-in.o app_api/built-in.o /home/gelmkaiel/Floaty/packages/crazyflie/crazyflie-firmware/examples/app_hello_world/built-in.o  -lm -o firmware.elf
+examples/app_hello_world/build/include/config/auto.conf.cmd:	app_api/Kconfig \
+floaty.map:LOAD app_api/built-in.o
+Kconfig:source "app_api/Kconfig"
+Makefile:objs-y += app_api
+src/modules/interface/app_channel.h: * \app_api
+src/modules/interface/app_channel.h: * \app_api
+src/modules/interface/app_channel.h: * \app_api

@@ -46,7 +46,7 @@
 #include "crtp_localization_service.h"
 #include "controller.h"
 #include "power_distribution.h"
-#include "collision_avoidance.h"
+// #include "collision_avoidance.h"
 #include "health.h"
 #include "supervisor.h"
 
@@ -56,6 +56,12 @@
 #include "statsCnt.h"
 #include "static_mem.h"
 #include "rateSupervisor.h"
+
+#include "led.h"
+
+#include "physicalConstants.h"
+#include "stm32f4xx_rcc.h"
+#include "stm32f4xx_gpio.h"
 
 
 static bool isInit;
@@ -187,12 +193,13 @@ void stabilizerInit(StateEstimatorType estimator)
   if(isInit)
     return;
 
+
   sensorsInit();
   stateEstimatorInit(estimator);
   controllerInit(ControllerTypeAny);
   powerDistributionInit();
   motorsInit(platformConfigGetMotorMapping());
-  collisionAvoidanceInit();
+  // collisionAvoidanceInit();
   estimatorType = getStateEstimator();
   controllerType = getControllerType();
 
@@ -213,7 +220,7 @@ bool stabilizerTest(void)
   pass &= controllerTest();
   pass &= powerDistributionTest();
   pass &= motorsTest();
-  pass &= collisionAvoidanceTest();
+  // pass &= collisionAvoidanceTest();
 
   return pass;
 }
@@ -262,6 +269,8 @@ static void stabilizerTask(void* param)
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
 
+    // ledSet(LED_GREEN_L, 1);
+
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
     lastWakeTime = xTaskGetTickCount();
 
@@ -282,8 +291,8 @@ static void stabilizerTask(void* param)
         controllerType = getControllerType();
       }
 
-      stateEstimator(&floaty_state, tick);
-      compressState();
+      // stateEstimator(&floaty_state, tick);
+      // compressState();
 
       if (crtpFloatyCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
         commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
@@ -294,8 +303,7 @@ static void stabilizerTask(void* param)
 
       // collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, tick);
 
-      // controller(&control, &setpoint, &sensorData, &state, tick);
-      controller(&floaty_control, &setpoint, &sensorData, &floaty_state, tick);
+      // controller(&floaty_control, &setpoint, &sensorData, &floaty_state, tick);
 
       checkEmergencyStopTimeout();
 

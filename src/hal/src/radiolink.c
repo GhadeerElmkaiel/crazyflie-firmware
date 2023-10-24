@@ -93,7 +93,6 @@ void radiolinkInit(void)
   DEBUG_QUEUE_MONITOR_REGISTER(crtpPacketDelivery);
 
   ASSERT(crtpPacketDelivery);
-
   syslinkInit();
 
   radiolinkSetChannel(configblockGetRadioChannel());

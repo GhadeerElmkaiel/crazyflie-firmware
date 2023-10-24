@@ -83,6 +83,7 @@
 #include "floaty_mm_pose.h"
 #include "floaty_gyro.h"
 
+// #include "led.h"
 
 // // Measurement models
 // #include "mm_distance.h"
@@ -212,6 +213,11 @@ bool estimatorFloatyKalmanTaskTest() {
 
 static void floatyKalmanTask(void* parameters) {
   systemWaitStart();
+
+  // ledSet(LED_RED_R, 1);
+  // vTaskDelay(500);
+  // ledSet(LED_RED_R, 0);
+
 
   uint32_t lastPrediction = xTaskGetTickCount();
   uint32_t nextPrediction = xTaskGetTickCount();
@@ -485,129 +491,129 @@ void estimatorFloatyKalmanGetEstimatedRot(float * rotationMatrix) {
   memcpy(rotationMatrix, floatyCoreData.R, 9*sizeof(float));
 }
 
-// /**
-//  * Variables and results from the Extended Kalman Filter
-//  */
-// LOG_GROUP_START(kalman)
-// /**
-//  * @brief Nonzero if the drone is in flight
-//  *
-//  *  Note: This is the same as sys.flying. Perhaps remove this one?
-//  */
-//   LOG_ADD(LOG_UINT8, inFlight, &quadIsFlying)
-//   /**
-//  * @brief State position in the global frame x
-//  *
-//  *   Note: This is similar to stateEstimate.x.
-//  */
-//   LOG_ADD(LOG_FLOAT, stateX, &coreData.S[KC_STATE_X])
-//  /**
-//  * @brief State position in the global frame y
-//  *
-//  *  Note: This is similar to stateEstimate.y
-//  */
-//   LOG_ADD(LOG_FLOAT, stateY, &coreData.S[KC_STATE_Y])
-//  /**
-//  * @brief State position in the global frame z
-//  *
-//  *  Note: This is similar to stateEstimate.z
-//  */
-//   LOG_ADD(LOG_FLOAT, stateZ, &coreData.S[KC_STATE_Z])
-//   /**
-//  * @brief State position in the global frame PX
-//  *
-//  *  Note: This is similar to stateEstimate.x
-//  */
-//   LOG_ADD(LOG_FLOAT, statePX, &coreData.S[KC_STATE_PX])
-//   /**
-//   * @brief State velocity in its body frame y
-//   *
-//   *  Note: This should be part of stateEstimate
-//   */
-//   LOG_ADD(LOG_FLOAT, statePY, &coreData.S[KC_STATE_PY])
-//   /**
-//   * @brief State velocity in its body frame z
-//   *
-//   *  Note: This should be part of stateEstimate
-//   */
-//   LOG_ADD(LOG_FLOAT, statePZ, &coreData.S[KC_STATE_PZ])
-//   /**
-//   * @brief State attitude error roll
-//   */
-//   LOG_ADD(LOG_FLOAT, stateD0, &coreData.S[KC_STATE_D0])
-//   /**
-//   * @brief State attitude error pitch
-//   */
-//   LOG_ADD(LOG_FLOAT, stateD1, &coreData.S[KC_STATE_D1])
-//   /**
-//   * @brief State attitude error yaw
-//   */
-//   LOG_ADD(LOG_FLOAT, stateD2, &coreData.S[KC_STATE_D2])
-//   /**
-//   * @brief Covariance matrix position x
-//   */
-//   LOG_ADD(LOG_FLOAT, varX, &coreData.P[KC_STATE_X][KC_STATE_X])
-//   /**
-//   * @brief Covariance matrix position y
-//   */
-//   LOG_ADD(LOG_FLOAT, varY, &coreData.P[KC_STATE_Y][KC_STATE_Y])
-//   /**
-//   * @brief Covariance matrix position z
-//   */
-//   LOG_ADD(LOG_FLOAT, varZ, &coreData.P[KC_STATE_Z][KC_STATE_Z])
-//   /**
-//   * @brief Covariance matrix velocity x
-//   */
-//   LOG_ADD(LOG_FLOAT, varPX, &coreData.P[KC_STATE_PX][KC_STATE_PX])
-//   /**
-//   * @brief Covariance matrix velocity y
-//   */
-//   LOG_ADD(LOG_FLOAT, varPY, &coreData.P[KC_STATE_PY][KC_STATE_PY])
-//   /**
-//   * @brief Covariance matrix velocity z
-//   */
-//   LOG_ADD(LOG_FLOAT, varPZ, &coreData.P[KC_STATE_PZ][KC_STATE_PZ])
-//   /**
-//   * @brief Covariance matrix attitude error roll
-//   */
-//   LOG_ADD(LOG_FLOAT, varD0, &coreData.P[KC_STATE_D0][KC_STATE_D0])
-//   /**
-//   * @brief Covariance matrix attitude error pitch
-//   */
-//   LOG_ADD(LOG_FLOAT, varD1, &coreData.P[KC_STATE_D1][KC_STATE_D1])
-//   /**
-//   * @brief Covariance matrix attitude error yaw
-//   */
-//   LOG_ADD(LOG_FLOAT, varD2, &coreData.P[KC_STATE_D2][KC_STATE_D2])
-//   /**
-//   * @brief Estimated Attitude quarternion w
-//   */
-//   LOG_ADD(LOG_FLOAT, q0, &coreData.q[0])
-//   /**
-//   * @brief Estimated Attitude quarternion x
-//   */
-//   LOG_ADD(LOG_FLOAT, q1, &coreData.q[1])
-//   /**
-//   * @brief Estimated Attitude quarternion y
-//   */
-//   LOG_ADD(LOG_FLOAT, q2, &coreData.q[2])
-//   /**
-//   * @brief Estimated Attitude quarternion z
-//   */
-//   LOG_ADD(LOG_FLOAT, q3, &coreData.q[3])
-//   /**
-//   * @brief Statistics rate of update step
-//   */
-//   STATS_CNT_RATE_LOG_ADD(rtUpdate, &updateCounter)
-//   /**
-//   * @brief Statistics rate of prediction step
-//   */
-//   STATS_CNT_RATE_LOG_ADD(rtPred, &predictionCounter)
-//   /**
-//   * @brief Statistics rate full estimation step
-//   */
-//   STATS_CNT_RATE_LOG_ADD(rtFinal, &finalizeCounter)
-// LOG_GROUP_STOP(kalman)
+/**
+ * Variables and results from the Extended Kalman Filter
+ */
+LOG_GROUP_START(kalman)
+/**
+ * @brief Nonzero if the drone is in flight
+ *
+ *  Note: This is the same as sys.flying. Perhaps remove this one?
+ */
+  LOG_ADD(LOG_UINT8, inFlight, &quadIsFlying)
+  /**
+ * @brief State position in the global frame x
+ *
+ *   Note: This is similar to stateEstimate.x.
+ */
+  LOG_ADD(LOG_FLOAT, stateX, &floatyCoreData.S[FKC_STATE_X])
+ /**
+ * @brief State position in the global frame y
+ *
+ *  Note: This is similar to stateEstimate.y
+ */
+  LOG_ADD(LOG_FLOAT, stateY, &floatyCoreData.S[FKC_STATE_Y])
+ /**
+ * @brief State position in the global frame z
+ *
+ *  Note: This is similar to stateEstimate.z
+ */
+  LOG_ADD(LOG_FLOAT, stateZ, &floatyCoreData.S[FKC_STATE_Z])
+  /**
+ * @brief State position in the global frame PX
+ *
+ *  Note: This is similar to stateEstimate.x
+ */
+  LOG_ADD(LOG_FLOAT, statePX, &floatyCoreData.S[FKC_STATE_PX])
+  /**
+  * @brief State velocity in its body frame y
+  *
+  *  Note: This should be part of stateEstimate
+  */
+  LOG_ADD(LOG_FLOAT, statePY, &floatyCoreData.S[FKC_STATE_PY])
+  /**
+  * @brief State velocity in its body frame z
+  *
+  *  Note: This should be part of stateEstimate
+  */
+  LOG_ADD(LOG_FLOAT, statePZ, &floatyCoreData.S[FKC_STATE_PZ])
+  // /**
+  // * @brief State attitude error roll
+  // */
+  // LOG_ADD(LOG_FLOAT, stateD0, &coreData.S[KC_STATE_D0])
+  // /**
+  // * @brief State attitude error pitch
+  // */
+  // LOG_ADD(LOG_FLOAT, stateD1, &coreData.S[KC_STATE_D1])
+  // /**
+  // * @brief State attitude error yaw
+  // */
+  // LOG_ADD(LOG_FLOAT, stateD2, &coreData.S[KC_STATE_D2])
+  /**
+  * @brief Covariance matrix position x
+  */
+  LOG_ADD(LOG_FLOAT, varX, &floatyCoreData.P[FKC_STATE_X][FKC_STATE_X])
+  /**
+  * @brief Covariance matrix position y
+  */
+  LOG_ADD(LOG_FLOAT, varY, &floatyCoreData.P[FKC_STATE_Y][FKC_STATE_Y])
+  /**
+  * @brief Covariance matrix position z
+  */
+  LOG_ADD(LOG_FLOAT, varZ, &floatyCoreData.P[FKC_STATE_Z][FKC_STATE_Z])
+  /**
+  * @brief Covariance matrix velocity x
+  */
+  LOG_ADD(LOG_FLOAT, varPX, &floatyCoreData.P[FKC_STATE_PX][FKC_STATE_PX])
+  /**
+  * @brief Covariance matrix velocity y
+  */
+  LOG_ADD(LOG_FLOAT, varPY, &floatyCoreData.P[FKC_STATE_PY][FKC_STATE_PY])
+  /**
+  * @brief Covariance matrix velocity z
+  */
+  LOG_ADD(LOG_FLOAT, varPZ, &floatyCoreData.P[FKC_STATE_PZ][FKC_STATE_PZ])
+  // /**
+  // * @brief Covariance matrix attitude error roll
+  // */
+  // LOG_ADD(LOG_FLOAT, varD0, &coreData.P[KC_STATE_D0][KC_STATE_D0])
+  // /**
+  // * @brief Covariance matrix attitude error pitch
+  // */
+  // LOG_ADD(LOG_FLOAT, varD1, &coreData.P[KC_STATE_D1][KC_STATE_D1])
+  // /**
+  // * @brief Covariance matrix attitude error yaw
+  // */
+  // LOG_ADD(LOG_FLOAT, varD2, &coreData.P[KC_STATE_D2][KC_STATE_D2])
+  /**
+  * @brief Estimated Attitude quarternion w
+  */
+  LOG_ADD(LOG_FLOAT, q0, &floatyCoreData.S[FKC_STATE_Q0])
+  /**
+  * @brief Estimated Attitude quarternion x
+  */
+  LOG_ADD(LOG_FLOAT, q1, &floatyCoreData.S[FKC_STATE_Q1])
+  /**
+  * @brief Estimated Attitude quarternion y
+  */
+  LOG_ADD(LOG_FLOAT, q2, &floatyCoreData.S[FKC_STATE_Q2])
+  /**
+  * @brief Estimated Attitude quarternion z
+  */
+  LOG_ADD(LOG_FLOAT, q3, &floatyCoreData.S[FKC_STATE_Q3])
+  /**
+  * @brief Statistics rate of update step
+  */
+  STATS_CNT_RATE_LOG_ADD(rtUpdate, &updateCounter)
+  /**
+  * @brief Statistics rate of prediction step
+  */
+  STATS_CNT_RATE_LOG_ADD(rtPred, &predictionCounter)
+  /**
+  * @brief Statistics rate full estimation step
+  */
+  STATS_CNT_RATE_LOG_ADD(rtFinal, &finalizeCounter)
+LOG_GROUP_STOP(kalman)
 
 // LOG_GROUP_START(outlierf)
 //   LOG_ADD(LOG_INT32, lhWin, &sweepOutlierFilterState.openingWindow)
