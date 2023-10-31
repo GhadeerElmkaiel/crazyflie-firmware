@@ -299,27 +299,107 @@ void floatyKalmanCoreInit(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreP
   // }
 }
 
+// void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise)
+// {
+//   // The Kalman gain as a column vector
+//   NO_DMA_CCM_SAFE_ZERO_INIT static float K[FKC_STATE_DIM];
+//   static arm_matrix_instance_f32 Km = {FKC_STATE_DIM, 1, (float *)K};
+
+//   // Temporary matrices for the covariance updates
+//   NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float tmpNN1d[FKC_STATE_DIM * FKC_STATE_DIM];
+//   static arm_matrix_instance_f32 tmpNN1m = {FKC_STATE_DIM, FKC_STATE_DIM, tmpNN1d};
+
+//   NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float tmpNN2d[FKC_STATE_DIM * FKC_STATE_DIM];
+//   static arm_matrix_instance_f32 tmpNN2m = {FKC_STATE_DIM, FKC_STATE_DIM, tmpNN2d};
+
+//   NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float tmpNN3d[FKC_STATE_DIM * FKC_STATE_DIM];
+//   static arm_matrix_instance_f32 tmpNN3m = {FKC_STATE_DIM, FKC_STATE_DIM, tmpNN3d};
+
+//   NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float HTd[FKC_STATE_DIM * 1];
+//   static arm_matrix_instance_f32 HTm = {FKC_STATE_DIM, 1, HTd};
+
+//   NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float PHTd[FKC_STATE_DIM * 1];
+//   static arm_matrix_instance_f32 PHTm = {FKC_STATE_DIM, 1, PHTd};
+
+//   ASSERT(Hm->numRows == 1);
+//   ASSERT(Hm->numCols == FKC_STATE_DIM);
+
+//   // ====== INNOVATION COVARIANCE ======
+
+//   mat_trans(Hm, &HTm);
+//   mat_mult(&thi_s->Pm, &HTm, &PHTm); // PH'
+//   float R = stdMeasNoise*stdMeasNoise;
+//   float HPHR = R; // HPH' + R
+//   for (int i=0; i<FKC_STATE_DIM; i++) { // Add the element of HPH' to the above
+//     HPHR += Hm->pData[i]*PHTd[i]; // thi_s obviously only works if the update is scalar (as in thi_s function)
+//   }
+//   ASSERT(!isnan(HPHR));
+
+//   // ====== MEASUREMENT UPDATE ======
+//   // Calculate the Kalman gain and perform the state update
+//   for (int i=0; i<FKC_STATE_DIM; i++) {
+//     K[i] = PHTd[i]/HPHR; // kalman gain = (PH' (HPH' + R )^-1)
+//     thi_s->S[i] = thi_s->S[i] + K[i] * error; // state update
+//   }
+//   assertFloatyStateNotNaN(thi_s);
+
+//   // ====== COVARIANCE UPDATE ======
+//   // ====== THERE IS ANOTHER WAY ======
+//   // To update the covariance matrix it is possibleto use the equation
+//   // P = (I - KH)P which is computationally less expensive but more sensitive
+//   // to numerical errors
+//   mat_mult(&Km, Hm, &tmpNN1m); // KH
+//   for (int i=0; i<FKC_STATE_DIM; i++) { tmpNN1d[FKC_STATE_DIM*i+i] -= 1; } // KH - I
+//   mat_trans(&tmpNN1m, &tmpNN2m); // (KH - I)'
+//   mat_mult(&tmpNN1m, &thi_s->Pm, &tmpNN3m); // (KH - I)*P
+//   mat_mult(&tmpNN3m, &tmpNN2m, &thi_s->Pm); // (KH - I)*P*(KH - I)'
+//   assertFloatyStateNotNaN(thi_s);
+//   // add the measurement variance and ensure boundedness and symmetry
+//   // TODO: Why would it hit these bounds? Needs to be investigated.
+//   for (int i=0; i<FKC_STATE_DIM; i++) {
+//     for (int j=i; j<FKC_STATE_DIM; j++) {
+//       float v = K[i] * R * K[j];
+//       float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i] + v; // add measurement noise
+//       if (isnan(p) || p > MAX_COVARIANCE) {
+//         thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
+//       } else if ( i==j && p < MIN_COVARIANCE ) {
+//         thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
+//       } else {
+//         thi_s->P[i][j] = thi_s->P[j][i] = p;
+//       }
+//     }
+//   }
+
+//   assertFloatyStateNotNaN(thi_s);
+// }
+
 void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise)
 {
   // The Kalman gain as a column vector
   NO_DMA_CCM_SAFE_ZERO_INIT static float K[FKC_STATE_DIM];
   static arm_matrix_instance_f32 Km = {FKC_STATE_DIM, 1, (float *)K};
 
+  // // Temporary matrices for the covariance updates
+  // NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float tmpNN1d[FKC_STATE_DIM * FKC_STATE_DIM];
+  // static arm_matrix_instance_f32 tmpNN1m = {FKC_STATE_DIM, FKC_STATE_DIM, tmpNN1d};
+
+  // NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float tmpNN2d[FKC_STATE_DIM * FKC_STATE_DIM];
+  // static arm_matrix_instance_f32 tmpNN2m = {FKC_STATE_DIM, FKC_STATE_DIM, tmpNN2d};
+
+  // NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float tmpNN3d[FKC_STATE_DIM * FKC_STATE_DIM];
+  // static arm_matrix_instance_f32 tmpNN3m = {FKC_STATE_DIM, FKC_STATE_DIM, tmpNN3d};
+
+
   // Temporary matrices for the covariance updates
-  NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float tmpNN1d[FKC_STATE_DIM * FKC_STATE_DIM];
-  static arm_matrix_instance_f32 tmpNN1m = {FKC_STATE_DIM, FKC_STATE_DIM, tmpNN1d};
-
-  NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float tmpNN2d[FKC_STATE_DIM * FKC_STATE_DIM];
-  static arm_matrix_instance_f32 tmpNN2m = {FKC_STATE_DIM, FKC_STATE_DIM, tmpNN2d};
-
-  NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float tmpNN3d[FKC_STATE_DIM * FKC_STATE_DIM];
-  static arm_matrix_instance_f32 tmpNN3m = {FKC_STATE_DIM, FKC_STATE_DIM, tmpNN3d};
+  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN1d[FKC_STATE_DIM][FKC_STATE_DIM];
+  static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN1m = { FKC_STATE_DIM, FKC_STATE_DIM, (float*)tmpNN1d};
 
   NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float HTd[FKC_STATE_DIM * 1];
   static arm_matrix_instance_f32 HTm = {FKC_STATE_DIM, 1, HTd};
 
   NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float PHTd[FKC_STATE_DIM * 1];
   static arm_matrix_instance_f32 PHTm = {FKC_STATE_DIM, 1, PHTd};
+
 
   ASSERT(Hm->numRows == 1);
   ASSERT(Hm->numCols == FKC_STATE_DIM);
@@ -343,23 +423,101 @@ void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_inst
   }
   assertFloatyStateNotNaN(thi_s);
 
+
+  // // ====== COVARIANCE UPDATE ======
+  // // ====== THERE IS ANOTHER WAY ======
+  // // To update the covariance matrix it is possibleto use the equation
+  // // P = (I - KH)P which is computationally less expensive but more sensitive
+  // // to numerical errors
+
+  // NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN2d[FKC_STATE_DIM][FKC_STATE_DIM];
+  // static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN2m = { FKC_STATE_DIM, FKC_STATE_DIM, (float*)tmpNN2d};
+
+  // NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN3d[FKC_STATE_DIM][FKC_STATE_DIM];
+  // static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN3m = { FKC_STATE_DIM, FKC_STATE_DIM, (float*)tmpNN3d};
+
+  // mat_mult(&Km, Hm, &tmpNN1m); // KH
+  // // for (int i=0; i<FKC_STATE_DIM; i++) { tmpNN1d[FKC_STATE_DIM*i+i] -= 1; } // KH - I // In case of 1D array
+  // for (int i=0; i<FKC_STATE_DIM; i++) { tmpNN1d[i][i] -= 1; } // KH - I // In case of 2D array
+  // mat_trans(&tmpNN1m, &tmpNN2m); // (KH - I)'
+
+
+  // // NO_DMA_CCM_SAFE_ZERO_INIT static float A[16][17];
+  // // static __attribute__((aligned(4))) arm_matrix_instance_f32 Am = { 16, 17, (float *)A}; 
+  // // NO_DMA_CCM_SAFE_ZERO_INIT static float B[17][16];
+  // // static __attribute__((aligned(4))) arm_matrix_instance_f32 Bm = { 17, 16, (float *)B}; 
+  // // NO_DMA_CCM_SAFE_ZERO_INIT static float C[16][16];
+  // // static __attribute__((aligned(4))) arm_matrix_instance_f32 Cm = { 16, 16, (float *)C}; 
+  // // mat_mult(&Am, &Am, &Bm); // AA
+  // // mat_mult(&Am, &Am, &Bm); // AA
+  // // mat_mult(&Am, &Bm, &Cm); // AA
+
+  // // mat_mult(&tmpNN1m, &thi_s->Pm, &tmpNN3m); // (KH - I)*P
+  // // mat_mult(&tmpNN3m, &tmpNN2m, &thi_s->Pm); // (KH - I)*P*(KH - I)'
+
+  // assertFloatyStateNotNaN(thi_s);
+  // // // add the measurement variance and ensure boundedness and symmetry
+  // // // TODO: Why would it hit these bounds? Needs to be investigated.
+  // for (int i=0; i<FKC_STATE_DIM; i++) {
+  //   for (int j=i; j<FKC_STATE_DIM; j++) {
+  //     float v = K[i] * R * K[j];
+  //     float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i] + v; // add measurement noise
+  //     if (isnan(p) || p > MAX_COVARIANCE) {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
+  //     } else if ( i==j && p < MIN_COVARIANCE ) {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
+  //     } else {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = p;
+  //     }
+  //   }
+  // }
+
   // ====== COVARIANCE UPDATE ======
-  // ====== THERE IS ANOTHER WAY ======
-  // To update the covariance matrix it is possibleto use the equation
-  // P = (I - KH)P which is computationally less expensive but more sensitive
-  // to numerical errors
-  mat_mult(&Km, Hm, &tmpNN1m); // KH
-  for (int i=0; i<FKC_STATE_DIM; i++) { tmpNN1d[FKC_STATE_DIM*i+i] -= 1; } // KH - I
-  mat_trans(&tmpNN1m, &tmpNN2m); // (KH - I)'
-  mat_mult(&tmpNN1m, &thi_s->Pm, &tmpNN3m); // (KH - I)*P
-  mat_mult(&tmpNN3m, &tmpNN2m, &thi_s->Pm); // (KH - I)*P*(KH - I)'
-  assertFloatyStateNotNaN(thi_s);
-  // add the measurement variance and ensure boundedness and symmetry
-  // TODO: Why would it hit these bounds? Needs to be investigated.
-  for (int i=0; i<FKC_STATE_DIM; i++) {
-    for (int j=i; j<FKC_STATE_DIM; j++) {
-      float v = K[i] * R * K[j];
-      float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i] + v; // add measurement noise
+  // ====== Here I implement a less computational expensive method ======
+  // I use P = (I - KH)P which is computationally less expensive but more
+  // sensitive to numerical errors. However, I do some additional 
+  // calculations to fix this issue (make sure that the result is symmetrical)
+  
+
+  // This matrix is used to store the negeative values of the H matrix
+  NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float NegHd[FKC_STATE_DIM * 1];
+  static arm_matrix_instance_f32 NegHm = {1, FKC_STATE_DIM, NegHd};
+
+  // These matrices are 10 by 10 blocks of the whole (I=KH) and P matrices
+  NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float Block_I_KHd[10][10];
+  static arm_matrix_instance_f32 Block_I_KHm = {10, 10, Block_I_KHd};
+
+  NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float Block_Pd[10][10];
+  static arm_matrix_instance_f32 Block_Pm = {10, 10, Block_Pd};
+
+  // This is to save the blocks multiplication results
+  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN2d[10][10];
+  static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN2m = { 10, 10, (float*)tmpNN2d};
+
+  for (int i=0; i<FKC_STATE_DIM; i++) { NegHd[i] = -1*Hm->pData[i]; } // -H
+
+  mat_mult(&Km, &NegHm, &tmpNN1m); // K(-H) = -KH
+  for (int i=0; i<FKC_STATE_DIM; i++) { tmpNN1d[i][i] += 1; } // I - KH // In case of 2D array
+
+  // Assigne the block values to the 10 by 10 matrices
+  // The values don't include the position and flap angle parameters
+  for (int i=3; i<13; i++) {
+    for (int j=3; j<13; j++) {
+      Block_I_KHd[i][j] = tmpNN1d[i][j];
+      Block_Pd[i][j] = thi_s->P[i][j];
+    }
+  }
+
+  mat_mult(&Block_I_KHm, &Block_Pm, &tmpNN2m); // (I - KH)P for a partial oart
+
+  // We calculate the diagonal values first
+  for (int i=0; i<FKC_STATE_DIM; i++) { thi_s->P[i][i] = tmpNN1d[i][i]*thi_s->P[i][i]; } // Update the diagonal values
+
+  // The result of the multiplication (I - KH)P should be symmetrical
+  // To insure symmetricity I average the two symmetrical values 
+  for (int i=3; i<13; i++) {
+    for (int j=i; j<13; j++) {
+      float p = 0.5f*(tmpNN2d[i][j] + tmpNN2d[j][i]);
       if (isnan(p) || p > MAX_COVARIANCE) {
         thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
       } else if ( i==j && p < MIN_COVARIANCE ) {
@@ -367,8 +525,41 @@ void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_inst
       } else {
         thi_s->P[i][j] = thi_s->P[j][i] = p;
       }
+      // thi_s->P[i][j] = (tmpNN2d[i][j] + tmpNN2d[j][i])/2;
+      // thi_s->P[j][i] = (tmpNN2d[i][j] + tmpNN2d[j][i])/2;
     }
   }
+
+  // NO_DMA_CCM_SAFE_ZERO_INIT static float A[16][17];
+  // static __attribute__((aligned(4))) arm_matrix_instance_f32 Am = { 16, 17, (float *)A}; 
+  // NO_DMA_CCM_SAFE_ZERO_INIT static float B[17][16];
+  // static __attribute__((aligned(4))) arm_matrix_instance_f32 Bm = { 17, 16, (float *)B}; 
+  // NO_DMA_CCM_SAFE_ZERO_INIT static float C[16][16];
+  // static __attribute__((aligned(4))) arm_matrix_instance_f32 Cm = { 16, 16, (float *)C}; 
+  // mat_mult(&Am, &Am, &Bm); // AA
+  // mat_mult(&Am, &Am, &Bm); // AA
+  // mat_mult(&Am, &Bm, &Cm); // AA
+
+  // mat_mult(&tmpNN1m, &thi_s->Pm, &tmpNN3m); // (KH - I)*P
+  // mat_mult(&tmpNN3m, &tmpNN2m, &thi_s->Pm); // (KH - I)*P*(KH - I)'
+
+  // assertFloatyStateNotNaN(thi_s);
+  // // // add the measurement variance and ensure boundedness and symmetry
+  // // // TODO: Why would it hit these bounds? Needs to be investigated.
+  // for (int i=0; i<FKC_STATE_DIM; i++) {
+  //   for (int j=i; j<FKC_STATE_DIM; j++) {
+  //     float v = K[i] * R * K[j];
+  //     float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i] + v; // add measurement noise
+  //     if (isnan(p) || p > MAX_COVARIANCE) {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
+  //     } else if ( i==j && p < MIN_COVARIANCE ) {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
+  //     } else {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = p;
+  //     }
+  //   }
+  // }
+
 
   assertFloatyStateNotNaN(thi_s);
 }

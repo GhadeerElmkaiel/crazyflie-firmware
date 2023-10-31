@@ -32,6 +32,10 @@ float control_dt = 1/SYS_ID_RATE;
 // bool loop_was_on = false;
 // uint32_t shift_in_tick = 0;
 
+static float r_roll;
+static float r_pitch;
+static float r_yaw;
+
 void controllerFloatyInit(void)
 {
   attitudeControllerInit(ATTITUDE_UPDATE_DT);
@@ -160,6 +164,10 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     measurement.data.flapsAngles.flap_3 = (control_m[2]- state->flaps.flap_3)*flapTimeConst*control_dt + state->flaps.flap_3;
     measurement.data.flapsAngles.flap_4 = (control_m[3]- state->flaps.flap_4)*flapTimeConst*control_dt + state->flaps.flap_4;
     estimatorEnqueue(&measurement);
+
+    r_roll = state->attitude.roll;
+    r_pitch = state->attitude.pitch;
+    r_yaw = state->attitude.yaw;
   }
   
 
@@ -235,4 +243,26 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 // // PARAM_ADD_CORE(PARAM_UINT16, value, &value)
 
 // PARAM_GROUP_STOP(extModeControl)
+
+
+
+/**
+ * Logging variables for the command and reference signals for the
+ * altitude PID controller
+ */
+LOG_GROUP_START(controller)
+/**
+ * @brief Gyro roll measurement in radians
+ */
+LOG_ADD(LOG_FLOAT, r_roll, &r_roll)
+/**
+ * @brief Gyro pitch measurement in radians
+ */
+LOG_ADD(LOG_FLOAT, r_pitch, &r_pitch)
+/**
+ * @brief Yaw  measurement in radians
+ */
+LOG_ADD(LOG_FLOAT, r_yaw, &r_yaw)
+
+LOG_GROUP_STOP(controller)
 

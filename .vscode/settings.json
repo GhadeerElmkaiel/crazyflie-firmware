@@ -79,7 +79,8 @@
         "usddeck.h": "c",
         "stm32f4xx_rcc.h": "c",
         "stm32f4xx.h": "c",
-        "collision_avoidance.h": "c"
+        "collision_avoidance.h": "c",
+        "watchdog.h": "c"
     },
     // "cortex-debug.gdbPath": "gdb-multiarch"
     "cortex-debug.gdbPath": "/usr/local/bin/arm-none-eabi-gdb"

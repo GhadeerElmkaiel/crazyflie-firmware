@@ -34,17 +34,13 @@
 #include "cfassert.h"
 #include "autoconf.h"
 
-
+#if 0
 #define PARAM_DEBUG(fmt, ...) DEBUG_PRINT("D/param " fmt, ## __VA_ARGS__)
 #define PARAM_ERROR(fmt, ...) DEBUG_PRINT("E/param " fmt, ## __VA_ARGS__)
-
-// #if 0
-// #define PARAM_DEBUG(fmt, ...) DEBUG_PRINT("D/param " fmt, ## __VA_ARGS__)
-// #define PARAM_ERROR(fmt, ...) DEBUG_PRINT("E/param " fmt, ## __VA_ARGS__)
-// #else
-// #define PARAM_DEBUG(...)
-// #define PARAM_ERROR(...)
-// #endif
+#else
+#define PARAM_DEBUG(...)
+#define PARAM_ERROR(...)
+#endif
 
 static const uint8_t typeLength[] = {
   [PARAM_UINT8]  = 1,
@@ -225,8 +221,8 @@ static int paramGetLen(uint16_t index)
 
 void paramLogicInit(void)
 {
-  unsigned short uxHighWaterMark;
-  uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+  // unsigned short uxHighWaterMark;
+  // uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
   int i;
   const char* group = NULL;
   int groupLength = 0;
@@ -243,7 +239,7 @@ void paramLogicInit(void)
   paramsCrc = 0;
   for (int i=0; i<paramsLen; i++)
   {
-    uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
+    // uxHighWaterMark = uxTaskGetStackHighWaterMark( NULL );
 
     int len = 5;
     memcpy(&buf[0], &paramsCrc, 4);

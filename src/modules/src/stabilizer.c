@@ -57,12 +57,6 @@
 #include "static_mem.h"
 #include "rateSupervisor.h"
 
-#include "led.h"
-
-#include "physicalConstants.h"
-#include "stm32f4xx_rcc.h"
-#include "stm32f4xx_gpio.h"
-
 
 static bool isInit;
 static bool emergencyStop = false;
@@ -193,7 +187,6 @@ void stabilizerInit(StateEstimatorType estimator)
   if(isInit)
     return;
 
-
   sensorsInit();
   stateEstimatorInit(estimator);
   controllerInit(ControllerTypeAny);
@@ -269,8 +262,6 @@ static void stabilizerTask(void* param)
     // The sensor should unlock at 1kHz
     sensorsWaitDataReady();
 
-    // ledSet(LED_GREEN_L, 1);
-
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
     lastWakeTime = xTaskGetTickCount();
 
@@ -291,8 +282,8 @@ static void stabilizerTask(void* param)
         controllerType = getControllerType();
       }
 
-      // stateEstimator(&floaty_state, tick);
-      // compressState();
+      stateEstimator(&floaty_state, tick);
+      compressState();
 
       if (crtpFloatyCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
         commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
@@ -303,7 +294,7 @@ static void stabilizerTask(void* param)
 
       // collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, tick);
 
-      // controller(&floaty_control, &setpoint, &sensorData, &floaty_state, tick);
+      controller(&floaty_control, &setpoint, &sensorData, &floaty_state, tick);
 
       checkEmergencyStopTimeout();
 

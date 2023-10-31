@@ -25,6 +25,10 @@
 
 #include "floaty_gyro.h"
 #include "math3d.h"
+
+// #include "FreeRTOS.h"
+// #include "task.h"
+
 float stdGyro = 0.1*_PI/180*2;
 
 
@@ -35,13 +39,21 @@ void floatyKalmanCoreUpdateWithGyro(floatyKalmanCoreData_t* thi_s, Axis3f *gyro)
   float h[FKC_STATE_DIM] = {0};
   arm_matrix_instance_f32 H = {1, FKC_STATE_DIM, h};
 
+  // UBaseType_t stackHighWaterMark;
+  // TaskHandle_t xCurrentTaskHandle = xTaskGetCurrentTaskHandle();
+
+  // stackHighWaterMark = uxTaskGetStackHighWaterMark(xCurrentTaskHandle);
+   
+
   h[FKC_STATE_ARX] = 1;
   floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->x - thi_s->S[FKC_STATE_ARX], stdGyro);
   h[FKC_STATE_ARX] = 0;
 
+
   h[FKC_STATE_ARY] = 1;
   floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->y - thi_s->S[FKC_STATE_ARY], stdGyro);
   h[FKC_STATE_ARY] = 0;
+
 
   h[FKC_STATE_ARZ] = 1;
   floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->z - thi_s->S[FKC_STATE_ARZ], stdGyro);

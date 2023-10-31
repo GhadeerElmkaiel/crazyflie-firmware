@@ -230,6 +230,10 @@ static void floatyKalmanTask(void* parameters) {
   while (true) {
     xSemaphoreTake(runTaskSemaphore, portMAX_DELAY);
 
+    UBaseType_t stackHighWaterMark;
+    TaskHandle_t xCurrentTaskHandle = xTaskGetCurrentTaskHandle();
+
+    stackHighWaterMark = uxTaskGetStackHighWaterMark(xCurrentTaskHandle);
     // If the client triggers an estimator reset via parameter update
     if (resetFLoatyEstimation) {
       estimatorFloatyKalmanInit();
@@ -248,11 +252,16 @@ static void floatyKalmanTask(void* parameters) {
     // Run the system dynamics to predict the state forward.
     if (osTick >= nextPrediction) { // update at the PREDICT_RATE
       float dt = T2S(osTick - lastPrediction);
+
+      // ------------------------------------------
+      // doneUpdate = true;
+      // ------------------------------------------
       if (predictFloatyStateForward(osTick, dt)) {
         lastPrediction = osTick;
         doneUpdate = true;
         STATS_CNT_RATE_EVENT(&predictionCounter);
       }
+      // ------------------------------------------
 
       nextPrediction = osTick + S2T(1.0f / PREDICT_RATE);
 
@@ -361,7 +370,8 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
   input.flap_2 = flapsAngles.flap_2;
   input.flap_3 = flapsAngles.flap_3;
   input.flap_4 = flapsAngles.flap_4;
-  // floatyKalmanCorePredict(&floatyCoreData, &input ,&accAverage, &gyroAverage, dt, quadIsFlying, &coreParams);
+
+
   floatyKalmanCorePredict(&floatyCoreData, &input, dt, &coreParams);
 
   floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroAverage);
