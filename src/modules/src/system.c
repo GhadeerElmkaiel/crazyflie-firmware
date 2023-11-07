@@ -77,6 +77,8 @@
   #include "cpxlink.h"
 #endif
 
+#include "cf_mock.h"
+
 #ifndef CONFIG_MOTORS_START_DISARMED
 #define ARM_INIT true
 #else

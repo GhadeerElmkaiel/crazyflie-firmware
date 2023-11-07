@@ -69,6 +69,7 @@ static setpoint_t setpoint;
 static sensorData_t sensorData;
 static state_t state;
 static floaty_state_t floaty_state;
+static float roll_degs, pitch_degs, yaw_degs;
 
 static control_t control;
 static floaty_control_t floaty_control;
@@ -298,6 +299,9 @@ static void stabilizerTask(void* param)
 
       checkEmergencyStopTimeout();
 
+      roll_degs = floaty_state.attitude.roll*180/3.14;
+      pitch_degs = floaty_state.attitude.pitch*180/3.14;
+      yaw_degs = floaty_state.attitude.yaw*180/3.14;
       //
       // The supervisor module keeps track of Crazyflie state such as if
       // we are ok to fly, or if the Crazyflie is in flight.
@@ -675,82 +679,85 @@ LOG_GROUP_START(stateEstimate)
 /**
  * @brief The estimated position of the platform in the global reference frame, X [m]
  */
-LOG_ADD_CORE(LOG_FLOAT, x, &state.position.x)
+LOG_ADD_CORE(LOG_FLOAT, x, &floaty_state.position.x)
 
 /**
  * @brief The estimated position of the platform in the global reference frame, Y [m]
  */
-LOG_ADD_CORE(LOG_FLOAT, y, &state.position.y)
+LOG_ADD_CORE(LOG_FLOAT, y, &floaty_state.position.y)
 
 /**
  * @brief The estimated position of the platform in the global reference frame, Z [m]
  */
-LOG_ADD_CORE(LOG_FLOAT, z, &state.position.z)
+LOG_ADD_CORE(LOG_FLOAT, z, &floaty_state.position.z)
 
 /**
  * @brief The velocity of the Crazyflie in the global reference frame, X [m/s]
  */
-LOG_ADD_CORE(LOG_FLOAT, vx, &state.velocity.x)
+LOG_ADD_CORE(LOG_FLOAT, vx, &floaty_state.velocity.x)
 
 /**
  * @brief The velocity of the Crazyflie in the global reference frame, Y [m/s]
  */
-LOG_ADD_CORE(LOG_FLOAT, vy, &state.velocity.y)
+LOG_ADD_CORE(LOG_FLOAT, vy, &floaty_state.velocity.y)
 
 /**
  * @brief The velocity of the Crazyflie in the global reference frame, Z [m/s]
  */
-LOG_ADD_CORE(LOG_FLOAT, vz, &state.velocity.z)
+LOG_ADD_CORE(LOG_FLOAT, vz, &floaty_state.velocity.z)
 
 /**
  * @brief The acceleration of the Crazyflie in the global reference frame, X [Gs]
  */
-LOG_ADD_CORE(LOG_FLOAT, ax, &state.acc.x)
+LOG_ADD_CORE(LOG_FLOAT, ax, &floaty_state.acc.x)
 
 /**
  * @brief The acceleration of the Crazyflie in the global reference frame, Y [Gs]
  */
-LOG_ADD_CORE(LOG_FLOAT, ay, &state.acc.y)
+LOG_ADD_CORE(LOG_FLOAT, ay, &floaty_state.acc.y)
 
 /**
  * @brief The acceleration of the Crazyflie in the global reference frame, without considering gravity, Z [Gs]
  */
-LOG_ADD_CORE(LOG_FLOAT, az, &state.acc.z)
+LOG_ADD_CORE(LOG_FLOAT, az, &floaty_state.acc.z)
 
 /**
  * @brief Attitude, roll angle [deg]
  */
-LOG_ADD_CORE(LOG_FLOAT, roll, &state.attitude.roll)
+// LOG_ADD_CORE(LOG_FLOAT, roll, &floaty_state.attitude.roll)
+LOG_ADD_CORE(LOG_FLOAT, roll, &roll_degs)
 
 /**
  * @brief Attitude, pitch angle (legacy CF2 body coordinate system, where pitch is inverted) [deg]
  */
-LOG_ADD_CORE(LOG_FLOAT, pitch, &state.attitude.pitch)
+// LOG_ADD_CORE(LOG_FLOAT, pitch, &floaty_state.attitude.pitch)
+LOG_ADD_CORE(LOG_FLOAT, pitch, &pitch_degs)
 
 /**
  * @brief Attitude, yaw angle [deg]
  */
-LOG_ADD_CORE(LOG_FLOAT, yaw, &state.attitude.yaw)
+// LOG_ADD_CORE(LOG_FLOAT, yaw, &floaty_state.attitude.yaw)
+LOG_ADD_CORE(LOG_FLOAT, yaw, &yaw_degs)
 
 /**
  * @brief Attitude as a quaternion, x
  */
-LOG_ADD_CORE(LOG_FLOAT, qx, &state.attitudeQuaternion.x)
+LOG_ADD_CORE(LOG_FLOAT, qx, &floaty_state.attitudeQuaternion.x)
 
 /**
  * @brief Attitude as a quaternion, y
  */
-LOG_ADD_CORE(LOG_FLOAT, qy, &state.attitudeQuaternion.y)
+LOG_ADD_CORE(LOG_FLOAT, qy, &floaty_state.attitudeQuaternion.y)
 
 /**
  * @brief Attitude as a quaternion, z
  */
-LOG_ADD_CORE(LOG_FLOAT, qz, &state.attitudeQuaternion.z)
+LOG_ADD_CORE(LOG_FLOAT, qz, &floaty_state.attitudeQuaternion.z)
 
 /**
  * @brief Attitude as a quaternion, w
  */
-LOG_ADD_CORE(LOG_FLOAT, qw, &state.attitudeQuaternion.w)
+LOG_ADD_CORE(LOG_FLOAT, qw, &floaty_state.attitudeQuaternion.w)
 LOG_GROUP_STOP(stateEstimate)
 
 /**

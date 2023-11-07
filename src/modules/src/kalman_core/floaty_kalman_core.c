@@ -373,6 +373,7 @@ void floatyKalmanCoreInit(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreP
 //   assertFloatyStateNotNaN(thi_s);
 // }
 
+
 void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise)
 {
   // The Kalman gain as a column vector
@@ -485,10 +486,10 @@ void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_inst
 
   // These matrices are 10 by 10 blocks of the whole (I=KH) and P matrices
   NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float Block_I_KHd[10][10];
-  static arm_matrix_instance_f32 Block_I_KHm = {10, 10, Block_I_KHd};
+  static arm_matrix_instance_f32 Block_I_KHm = {10, 10, (float*)Block_I_KHd};
 
   NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float Block_Pd[10][10];
-  static arm_matrix_instance_f32 Block_Pm = {10, 10, Block_Pd};
+  static arm_matrix_instance_f32 Block_Pm = {10, 10, (float*)Block_Pd};
 
   // This is to save the blocks multiplication results
   NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN2d[10][10];
@@ -503,63 +504,37 @@ void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_inst
   // The values don't include the position and flap angle parameters
   for (int i=3; i<13; i++) {
     for (int j=3; j<13; j++) {
-      Block_I_KHd[i][j] = tmpNN1d[i][j];
-      Block_Pd[i][j] = thi_s->P[i][j];
+      Block_I_KHd[i-3][j-3] = tmpNN1d[i][j];
+      Block_Pd[i-3][j-3] = thi_s->P[i][j];
     }
   }
 
   mat_mult(&Block_I_KHm, &Block_Pm, &tmpNN2m); // (I - KH)P for a partial oart
 
   // We calculate the diagonal values first
-  for (int i=0; i<FKC_STATE_DIM; i++) { thi_s->P[i][i] = tmpNN1d[i][i]*thi_s->P[i][i]; } // Update the diagonal values
+  float p_;
+  for (int i=0; i<FKC_STATE_DIM; i++) {
+    p_ = tmpNN1d[i][i]*thi_s->P[i][i];
+    thi_s->P[i][i] = p_;
+    // thi_s->P[i][i] = tmpNN1d[i][i]*thi_s->P[i][i];
+  } // Update the diagonal values
 
   // The result of the multiplication (I - KH)P should be symmetrical
   // To insure symmetricity I average the two symmetrical values 
-  for (int i=3; i<13; i++) {
-    for (int j=i; j<13; j++) {
+  for (int i=0; i<10; i++) {
+    for (int j=i; j<10; j++) {
       float p = 0.5f*(tmpNN2d[i][j] + tmpNN2d[j][i]);
       if (isnan(p) || p > MAX_COVARIANCE) {
-        thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
+        thi_s->P[i+3][j+3] = thi_s->P[j+3][i+3] = MAX_COVARIANCE;
       } else if ( i==j && p < MIN_COVARIANCE ) {
-        thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
+        thi_s->P[i+3][j+3] = thi_s->P[j+3][i+3] = MIN_COVARIANCE;
       } else {
-        thi_s->P[i][j] = thi_s->P[j][i] = p;
+        thi_s->P[i+3][j+3] = thi_s->P[j+3][i+3] = p;
       }
       // thi_s->P[i][j] = (tmpNN2d[i][j] + tmpNN2d[j][i])/2;
       // thi_s->P[j][i] = (tmpNN2d[i][j] + tmpNN2d[j][i])/2;
     }
   }
-
-  // NO_DMA_CCM_SAFE_ZERO_INIT static float A[16][17];
-  // static __attribute__((aligned(4))) arm_matrix_instance_f32 Am = { 16, 17, (float *)A}; 
-  // NO_DMA_CCM_SAFE_ZERO_INIT static float B[17][16];
-  // static __attribute__((aligned(4))) arm_matrix_instance_f32 Bm = { 17, 16, (float *)B}; 
-  // NO_DMA_CCM_SAFE_ZERO_INIT static float C[16][16];
-  // static __attribute__((aligned(4))) arm_matrix_instance_f32 Cm = { 16, 16, (float *)C}; 
-  // mat_mult(&Am, &Am, &Bm); // AA
-  // mat_mult(&Am, &Am, &Bm); // AA
-  // mat_mult(&Am, &Bm, &Cm); // AA
-
-  // mat_mult(&tmpNN1m, &thi_s->Pm, &tmpNN3m); // (KH - I)*P
-  // mat_mult(&tmpNN3m, &tmpNN2m, &thi_s->Pm); // (KH - I)*P*(KH - I)'
-
-  // assertFloatyStateNotNaN(thi_s);
-  // // // add the measurement variance and ensure boundedness and symmetry
-  // // // TODO: Why would it hit these bounds? Needs to be investigated.
-  // for (int i=0; i<FKC_STATE_DIM; i++) {
-  //   for (int j=i; j<FKC_STATE_DIM; j++) {
-  //     float v = K[i] * R * K[j];
-  //     float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i] + v; // add measurement noise
-  //     if (isnan(p) || p > MAX_COVARIANCE) {
-  //       thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
-  //     } else if ( i==j && p < MIN_COVARIANCE ) {
-  //       thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
-  //     } else {
-  //       thi_s->P[i][j] = thi_s->P[j][i] = p;
-  //     }
-  //   }
-  // }
-
 
   assertFloatyStateNotNaN(thi_s);
 }
