@@ -391,6 +391,7 @@ static bool updateFloatyQueuedMeasurements(const uint32_t tick) {
   while (estimatorDequeue(&m)) {
     switch (m.type) {
       case MeasurementTypeTDOA:
+        DEBUG_PRINT("WARNING: Received TDOA data, Function not implemented\n");
         if(robustTdoa){
           // robust KF update with TDOA measurements
           // kalmanCoreRobustUpdateWithTDOA(&coreData, &m.data.tdoa);
@@ -402,6 +403,7 @@ static bool updateFloatyQueuedMeasurements(const uint32_t tick) {
         break;
       case MeasurementTypePosition:
         // kalmanCoreUpdateWithPosition(&coreData, &m.data.position);
+        DEBUG_PRINT("WARNING: Received Position data, Function not implemented\n");
         doneUpdate = true;
         break;
       case MeasurementTypePose:
@@ -410,6 +412,7 @@ static bool updateFloatyQueuedMeasurements(const uint32_t tick) {
         doneUpdate = true;
         break;
       case MeasurementTypeDistance:
+        DEBUG_PRINT("WARNING: Received Distance data, Function not implemented\n");
         if(robustTwr){
             // robust KF update with UWB TWR measurements
             // kalmanCoreRobustUpdateWithDistance(&coreData, &m.data.distance);
@@ -420,6 +423,7 @@ static bool updateFloatyQueuedMeasurements(const uint32_t tick) {
         doneUpdate = true;
         break;
       case MeasurementTypeTOF:
+        DEBUG_PRINT("WARNING: Received TOF data, Function not implemented\n");
         // kalmanCoreUpdateWithTof(&coreData, &m.data.tof);
         doneUpdate = true;
         break;
@@ -440,6 +444,9 @@ static bool updateFloatyQueuedMeasurements(const uint32_t tick) {
         doneUpdate = true;
         break;
       case MeasurementTypeGyroscope:
+        // if(tick%1000==0){
+        //   DEBUG_PRINT("Received Gyro data\n");
+        // }
         gyroAccumulator.x += m.data.gyroscope.gyro.x;
         gyroAccumulator.y += m.data.gyroscope.gyro.y;
         gyroAccumulator.z += m.data.gyroscope.gyro.z;

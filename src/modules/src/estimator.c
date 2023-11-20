@@ -2,7 +2,7 @@
 #include "queue.h"
 #include "static_mem.h"
 
-#define DEBUG_MODULE "ESTIMATOR"
+// #define DEBUG_MODULE "ESTIMATOR"
 #include "debug.h"
 
 #include "cfassert.h"

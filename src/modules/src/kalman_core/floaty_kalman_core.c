@@ -168,9 +168,9 @@ void floatyKalmanCoreDefaultParams(floatyKalmanCoreParams_t* params)
 
   params->procNoiseAcc_xy = 0.5f;
   params->procNoiseAcc_z = 1.0f;
-  params->procNoiseVel = 0;
-  params->procNoisePos = 0.01;
-  params->procNoiseAtt = 0.01;
+  params->procNoiseVel = 0.5;
+  params->procNoisePos = 0.05;
+  params->procNoiseAtt = 0.05;
   params->measNoiseBaro = 2.0f;           // meters
   params->measNoiseGyro_rollpitch = 0.1f; // radians per second
   params->measNoiseGyro_yaw = 0.1f;       // radians per second
@@ -536,6 +536,20 @@ void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_inst
     }
   }
 
+  // Setting non diagonal values in the case of position to zero
+  for (int i=0; i<3; i++){
+    for (int j=i+1; j<FKC_STATE_DIM; j++){
+      thi_s->P[i][j] = thi_s->P[j][i] = 0;
+    }
+  }
+
+  // Setting non diagonal values in the case of quaternion to zero
+  for (int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
+    for (int j=i-1; j>2; j--){
+      thi_s->P[i][j] = thi_s->P[j][i] = 0;
+    }
+  }
+
   assertFloatyStateNotNaN(thi_s);
 }
 
@@ -679,9 +693,33 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   mat_mult(&thi_s->Pm, &tmpNN2m, &tmpNN3m); // P A'
   float p;
 
-  for(int i=0; i<FKC_STATE_DIM; i++){
+  // for(int i=0; i<FKC_STATE_DIM; i++){
+  //   // Maybe here I can remove half the evluations by usign the fact that P is symmetrical
+  //   for(int j=0; j<FKC_STATE_DIM; j++){
+  //     p = thi_s->P[i][j]+dt*(tmpNN1d[i][j] + tmpNN3d[i][j]); // Updating using the first part of P* = AP + PA' + Q
+  //     thi_s->P[i][j] = p;
+  //   }
+  // }
+
+  // -------------------------------------------------- 
+  // Here I update using the fact that the uncertainty (P) matrix has only diagonal values for position and Flap angles
+  // So we do the update for the central block of the matrix and update the diagonal values only for the position and flaps
+  
+  // Update the position uncertainty values (diag only)
+  for(int i=0; i<3; i++){
+      p = thi_s->P[i][i]+dt*(tmpNN1d[i][i] + tmpNN3d[i][i]); // Updating using the first part of P* = AP + PA' + Q
+      thi_s->P[i][i] = p;
+  }
+
+  // Update the flaps angle uncertainty values (diag only)
+  for(int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
+      p = thi_s->P[i][i]+dt*(tmpNN1d[i][i] + tmpNN3d[i][i]); // Updating using the first part of P* = AP + PA' + Q
+      thi_s->P[i][i] = p;
+  }
+
+  for(int i=3; i<FKC_STATE_F1; i++){
     // Maybe here I can remove half the evluations by usign the fact that P is symmetrical
-    for(int j=0; j<FKC_STATE_DIM; j++){
+    for(int j=3; j<FKC_STATE_F1; j++){
       p = thi_s->P[i][j]+dt*(tmpNN1d[i][j] + tmpNN3d[i][j]); // Updating using the first part of P* = AP + PA' + Q
       thi_s->P[i][j] = p;
     }
@@ -713,8 +751,24 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   thi_s->P[FKC_STATE_F4][FKC_STATE_F4] += dt*params->procNoiseFlaps;  // add process noise on flap angles
 
 
-  for (int i=0; i<FKC_STATE_DIM; i++) {
-    for (int j=i; j<FKC_STATE_DIM; j++) {
+  // // Make sure that P is symmetrical
+  // for (int i=0; i<FKC_STATE_DIM; i++) {
+  //   for (int j=i; j<FKC_STATE_DIM; j++) {
+  //     float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i];
+  //     if (isnan(p) || p > MAX_COVARIANCE) {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
+  //     } else if ( i==j && p < MIN_COVARIANCE ) {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
+  //     } else {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = p;
+  //     }
+  //   }
+  // }
+
+  // Make sure that P is symmetrical
+  // This is enough because the values outside this block are only on the diagonal
+  for (int i=3; i<FKC_STATE_F1; i++) {
+    for (int j=i; j<FKC_STATE_F1; j++) {
       float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i];
       if (isnan(p) || p > MAX_COVARIANCE) {
         thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
@@ -725,6 +779,27 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
       }
     }
   }
+
+  // Limit the uncertainty for position values (diag only)
+  for(int i=0; i<3; i++){
+      p = thi_s->P[i][i]; 
+      if (isnan(p) || p > MAX_COVARIANCE) {
+        thi_s->P[i][i] = MAX_COVARIANCE;
+      } else if (p < MIN_COVARIANCE ) {
+        thi_s->P[i][i] = MIN_COVARIANCE;
+      }
+  }
+
+  // Limit the uncertainty for flaps' angles values (diag only)
+  for(int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
+      p = thi_s->P[i][i]; 
+      if (isnan(p) || p > MAX_COVARIANCE) {
+        thi_s->P[i][i] = MAX_COVARIANCE;
+      } else if (p < MIN_COVARIANCE ) {
+        thi_s->P[i][i] = MIN_COVARIANCE;
+      }
+  }
+
 
 
   // ------------------------ READ THIS ------------------------
@@ -745,6 +820,21 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   floatyNormalizeQuat(thi_s);
   updateRotationMatrices(thi_s);
 
+
+  // // Setting non diagonal values in the case of position to zero
+  // for (int i=0; i<3; i++){
+  //   for (int j=i+1; j<FKC_STATE_DIM; j++){
+  //     thi_s->P[i][j] = thi_s->P[j][i] = 0;
+  //   }
+  // }
+
+  // // Setting non diagonal values in the case of quaternion to zero
+  // for (int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
+  //   for (int j=i-1; j>2; j--){
+  //     thi_s->P[i][j] = thi_s->P[j][i] = 0;
+  //   }
+  // }
+  
   assertFloatyStateNotNaN(thi_s);
 }
 

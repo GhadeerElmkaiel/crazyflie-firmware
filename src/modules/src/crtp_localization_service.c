@@ -51,7 +51,11 @@
 
 #include "peer_localization.h"
 
+#include "debug.h"
+#define DEBUG_MODULE "CTRP_LOC_SRV"
+
 #include "num.h"
+
 
 
 #define NBR_OF_RANGES_IN_PACKET   5
@@ -119,7 +123,7 @@ static bool enableRangeStreamFloat = false;
 static CRTPPacket LhAngle;
 #endif
 static bool enableLighthouseAngleStream = false;
-static float extPosStdDev = 0.01;
+static float extPosStdDev = 0.005;
 static float extQuatStdDev = 4.5e-3;
 static bool isInit = false;
 static uint8_t my_id;
@@ -145,6 +149,8 @@ void locSrvInit()
 
 static void locSrvCrtpCB(CRTPPacket* pk)
 {
+  // DEBUG_PRINT("Got radio position and called function locSrvCrtpCB\n");
+
   switch (pk->channel)
   {
     case EXT_POSITION:

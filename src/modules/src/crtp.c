@@ -43,6 +43,8 @@
 
 #include "log.h"
 
+#include "debug.h"
+#define DEBUG_MODULE "CRTP"
 
 static bool isInit;
 
@@ -71,7 +73,8 @@ static xQueueHandle  txQueue;
 
 #define CRTP_NBR_OF_PORTS 16
 #define CRTP_TX_QUEUE_SIZE 120
-#define CRTP_RX_QUEUE_SIZE 16
+// #define CRTP_RX_QUEUE_SIZE 16
+#define CRTP_RX_QUEUE_SIZE 36
 
 static void crtpTxTask(void *param);
 static void crtpRxTask(void *param);
@@ -185,6 +188,7 @@ void crtpRxTask(void *param)
 
         if (callbacks[p.port])
         {
+          // DEBUG_PRINT("Got a radio packet crtpRxTask\n");
           callbacks[p.port](&p);
         }
 

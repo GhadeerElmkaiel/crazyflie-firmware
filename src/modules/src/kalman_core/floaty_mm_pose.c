@@ -28,8 +28,8 @@
 
 void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasurement_t *pose)
 {
-  // a direct measurement of states x, y, and z, and orientation
-  // do a scalar update for each state, since this should be faster than updating all together
+  // // a direct measurement of states x, y, and z, and orientation
+  // // do a scalar update for each state, since this should be faster than updating all together
   float h[FKC_STATE_DIM] = {0};
   arm_matrix_instance_f32 H = {1, FKC_STATE_DIM, h};
 
@@ -42,19 +42,19 @@ void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasureme
   // float h[FKC_STATE_DIM] = {0};
   // arm_matrix_instance_f32 H = {1, FKC_STATE_DIM, h};
   h[FKC_STATE_Q0] = 1;
-  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.q0 - thi_s->S[FKC_STATE_Q0], pose->stdDevQuat);
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.w - thi_s->S[FKC_STATE_Q0], pose->stdDevQuat);
 
   h[FKC_STATE_Q0] = 0;
   h[FKC_STATE_Q1] = 1;
-  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.q1 - thi_s->S[FKC_STATE_Q1], pose->stdDevQuat);
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.x - thi_s->S[FKC_STATE_Q1], pose->stdDevQuat);
 
   h[FKC_STATE_Q1] = 0;
   h[FKC_STATE_Q2] = 1;
-  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.q2 - thi_s->S[FKC_STATE_Q2], pose->stdDevQuat);
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.y - thi_s->S[FKC_STATE_Q2], pose->stdDevQuat);
 
   h[FKC_STATE_Q2] = 0;
   h[FKC_STATE_Q3] = 1;
-  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.q3 - thi_s->S[FKC_STATE_Q3], pose->stdDevQuat);
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.z - thi_s->S[FKC_STATE_Q3], pose->stdDevQuat);
   
   h[FKC_STATE_Q3] = 0;
 

@@ -84,7 +84,8 @@
         "bitset": "c",
         "fstream": "c",
         "sstream": "c",
-        "condition_variable": "c"
+        "condition_variable": "c",
+        "peer_localization.h": "c"
     },
     // "cortex-debug.gdbPath": "gdb-multiarch"
     "cortex-debug.gdbPath": "/usr/local/bin/arm-none-eabi-gdb"

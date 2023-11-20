@@ -28,6 +28,9 @@
 #include "autoconf.h"
 #include "stabilizer_types.h"
 
+#include "debug.h"
+#define DEBUG_MODULE "ESTIMATOR"
+
 typedef enum {
   anyEstimator = 0,
 //   complementaryEstimator,
@@ -134,6 +137,7 @@ static inline void estimatorEnqueueTDOA(const tdoaMeasurement_t *tdoa)
 
 static inline void estimatorEnqueuePosition(const positionMeasurement_t *position)
 {
+  // DEBUG_PRINT("estimatorEnqueuePosition is called\n");
   measurement_t m;
   m.type = MeasurementTypePosition;
   m.data.position = *position;
@@ -142,6 +146,7 @@ static inline void estimatorEnqueuePosition(const positionMeasurement_t *positio
 
 static inline void estimatorEnqueuePose(const poseMeasurement_t *pose)
 {
+  // DEBUG_PRINT("estimatorEnqueuePose is called\n");
   measurement_t m;
   m.type = MeasurementTypePose;
   m.data.pose = *pose;

@@ -38,6 +38,8 @@
 #include "autoconf.h"
 #include "led.h"
 
+#include "debug.h"
+
 #ifdef CONFIG_DEBUG_ENABLE_LED_MORSE
   #define DOT 100
   #define DASH (3 * DOT)
