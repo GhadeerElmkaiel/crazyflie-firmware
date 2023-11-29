@@ -148,6 +148,8 @@ NO_DMA_CCM_SAFE_ZERO_INIT static floatyKalmanCoreData_t floatyCoreData;
 
 static bool isInit = false;
 
+static uint8_t resetKalman =0;
+
 static Axis3f accAccumulator;
 static Axis3f gyroAccumulator;
 static uint32_t accAccumulatorCount;
@@ -343,6 +345,11 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
       || accAccumulatorCount == 0)
   {
     return false;
+  }
+
+  if(resetKalman!=0){
+    floatyKalmanCoreInit(&floatyCoreData, &coreParams);
+    resetKalman=0;
   }
 
   // gyro is in deg/sec but the estimator requires rad/sec
@@ -631,6 +638,17 @@ LOG_GROUP_START(kalman)
   */
   STATS_CNT_RATE_LOG_ADD(rtFinal, &finalizeCounter)
 LOG_GROUP_STOP(kalman)
+
+
+PARAM_GROUP_START(FloatyKalm)
+
+/**
+ * @brief Set to nonzero to reset the Kalman filter values
+ */
+  PARAM_ADD_CORE(PARAM_UINT8, resetKalman, &resetKalman)
+
+PARAM_GROUP_STOP(FloatyKalm)
+
 
 // LOG_GROUP_START(outlierf)
 //   LOG_ADD(LOG_INT32, lhWin, &sweepOutlierFilterState.openingWindow)

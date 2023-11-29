@@ -284,14 +284,14 @@ static void stabilizerTask(void* param)
       }
 
       stateEstimator(&floaty_state, tick);
-      compressState();
+      // compressState();
 
       if (crtpFloatyCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
         commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
       }
 
       commanderGetSetpoint(&setpoint, &state);
-      compressSetpoint();
+      // compressSetpoint();
 
       // collisionAvoidanceUpdateSetpoint(&setpoint, &sensorData, &state, tick);
 
@@ -468,52 +468,52 @@ LOG_GROUP_STOP(ctrltarget)
  * Note: all members may not be updated depending on how the system is used
  */
 
-LOG_GROUP_START(ctrltargetZ)
-/**
- * @brief Desired position X [mm]
- */
-LOG_ADD(LOG_INT16, x, &setpointCompressed.x)
+// LOG_GROUP_START(ctrltargetZ)
+// /**
+//  * @brief Desired position X [mm]
+//  */
+// LOG_ADD(LOG_INT16, x, &setpointCompressed.x)
 
-/**
- * @brief Desired position Y [mm]
- */
-LOG_ADD(LOG_INT16, y, &setpointCompressed.y)
+// /**
+//  * @brief Desired position Y [mm]
+//  */
+// LOG_ADD(LOG_INT16, y, &setpointCompressed.y)
 
-/**
- * @brief Desired position Z [mm]
- */
-LOG_ADD(LOG_INT16, z, &setpointCompressed.z)
+// /**
+//  * @brief Desired position Z [mm]
+//  */
+// LOG_ADD(LOG_INT16, z, &setpointCompressed.z)
 
-/**
- * @brief Desired velocity X [mm/s]
- */
-LOG_ADD(LOG_INT16, vx, &setpointCompressed.vx)
+// /**
+//  * @brief Desired velocity X [mm/s]
+//  */
+// LOG_ADD(LOG_INT16, vx, &setpointCompressed.vx)
 
-/**
- * @brief Desired velocity Y [mm/s]
- */
-LOG_ADD(LOG_INT16, vy, &setpointCompressed.vy)
+// /**
+//  * @brief Desired velocity Y [mm/s]
+//  */
+// LOG_ADD(LOG_INT16, vy, &setpointCompressed.vy)
 
-/**
- * @brief Desired velocity Z [mm/s]
- */
-LOG_ADD(LOG_INT16, vz, &setpointCompressed.vz)
+// /**
+//  * @brief Desired velocity Z [mm/s]
+//  */
+// LOG_ADD(LOG_INT16, vz, &setpointCompressed.vz)
 
-/**
- * @brief Desired acceleration X [mm/s^2]
- */
-LOG_ADD(LOG_INT16, ax, &setpointCompressed.ax)
+// /**
+//  * @brief Desired acceleration X [mm/s^2]
+//  */
+// LOG_ADD(LOG_INT16, ax, &setpointCompressed.ax)
 
-/**
- * @brief Desired acceleration Y [mm/s^2]
- */
-LOG_ADD(LOG_INT16, ay, &setpointCompressed.ay)
+// /**
+//  * @brief Desired acceleration Y [mm/s^2]
+//  */
+// LOG_ADD(LOG_INT16, ay, &setpointCompressed.ay)
 
-/**
- * @brief Desired acceleration Z [mm/s^2]
- */
-LOG_ADD(LOG_INT16, az, &setpointCompressed.az)
-LOG_GROUP_STOP(ctrltargetZ)
+// /**
+//  * @brief Desired acceleration Z [mm/s^2]
+//  */
+// LOG_ADD(LOG_INT16, az, &setpointCompressed.az)
+// LOG_GROUP_STOP(ctrltargetZ)
 
 /**
  * Logs to set the estimator and controller type
@@ -767,70 +767,70 @@ LOG_GROUP_STOP(stateEstimate)
  *
  * Note: all values may not be updated depending on which estimator that is used.
  */
-LOG_GROUP_START(stateEstimateZ)
+// LOG_GROUP_START(stateEstimateZ)
 
-/**
- * @brief The position of the Crazyflie in the global reference frame, X [mm]
- */
-LOG_ADD(LOG_INT16, x, &stateCompressed.x)
+// /**
+//  * @brief The position of the Crazyflie in the global reference frame, X [mm]
+//  */
+// LOG_ADD(LOG_INT16, x, &stateCompressed.x)
 
-/**
- * @brief The position of the Crazyflie in the global reference frame, Y [mm]
- */
-LOG_ADD(LOG_INT16, y, &stateCompressed.y)
+// /**
+//  * @brief The position of the Crazyflie in the global reference frame, Y [mm]
+//  */
+// LOG_ADD(LOG_INT16, y, &stateCompressed.y)
 
-/**
- * @brief The position of the Crazyflie in the global reference frame, Z [mm]
- */
-LOG_ADD(LOG_INT16, z, &stateCompressed.z)
+// /**
+//  * @brief The position of the Crazyflie in the global reference frame, Z [mm]
+//  */
+// LOG_ADD(LOG_INT16, z, &stateCompressed.z)
 
-/**
- * @brief The velocity of the Crazyflie in the global reference frame, X [mm/s]
- */
-LOG_ADD(LOG_INT16, vx, &stateCompressed.vx)
+// /**
+//  * @brief The velocity of the Crazyflie in the global reference frame, X [mm/s]
+//  */
+// LOG_ADD(LOG_INT16, vx, &stateCompressed.vx)
 
-/**
- * @brief The velocity of the Crazyflie in the global reference frame, Y [mm/s]
- */
-LOG_ADD(LOG_INT16, vy, &stateCompressed.vy)
+// /**
+//  * @brief The velocity of the Crazyflie in the global reference frame, Y [mm/s]
+//  */
+// LOG_ADD(LOG_INT16, vy, &stateCompressed.vy)
 
-/**
- * @brief The velocity of the Crazyflie in the global reference frame, Z [mm/s]
- */
-LOG_ADD(LOG_INT16, vz, &stateCompressed.vz)
+// /**
+//  * @brief The velocity of the Crazyflie in the global reference frame, Z [mm/s]
+//  */
+// LOG_ADD(LOG_INT16, vz, &stateCompressed.vz)
 
-/**
- * @brief The acceleration of the Crazyflie in the global reference frame, X [mm/s]
- */
-LOG_ADD(LOG_INT16, ax, &stateCompressed.ax)
+// /**
+//  * @brief The acceleration of the Crazyflie in the global reference frame, X [mm/s]
+//  */
+// LOG_ADD(LOG_INT16, ax, &stateCompressed.ax)
 
-/**
- * @brief The acceleration of the Crazyflie in the global reference frame, Y [mm/s]
- */
-LOG_ADD(LOG_INT16, ay, &stateCompressed.ay)
+// /**
+//  * @brief The acceleration of the Crazyflie in the global reference frame, Y [mm/s]
+//  */
+// LOG_ADD(LOG_INT16, ay, &stateCompressed.ay)
 
-/**
- * @brief The acceleration of the Crazyflie in the global reference frame, including gravity, Z [mm/s]
- */
-LOG_ADD(LOG_INT16, az, &stateCompressed.az)
+// /**
+//  * @brief The acceleration of the Crazyflie in the global reference frame, including gravity, Z [mm/s]
+//  */
+// LOG_ADD(LOG_INT16, az, &stateCompressed.az)
 
-/**
- * @brief Attitude as a compressed quaternion, see see quatcompress.h for details
- */
-LOG_ADD(LOG_UINT32, quat, &stateCompressed.quat)
+// /**
+//  * @brief Attitude as a compressed quaternion, see see quatcompress.h for details
+//  */
+// LOG_ADD(LOG_UINT32, quat, &stateCompressed.quat)
 
-/**
- * @brief Roll rate (angular velocity) [milliradians / sec]
- */
-LOG_ADD(LOG_INT16, rateRoll, &stateCompressed.rateRoll)
+// /**
+//  * @brief Roll rate (angular velocity) [milliradians / sec]
+//  */
+// LOG_ADD(LOG_INT16, rateRoll, &stateCompressed.rateRoll)
 
-/**
- * @brief Pitch rate (angular velocity) [milliradians / sec]
- */
-LOG_ADD(LOG_INT16, ratePitch, &stateCompressed.ratePitch)
+// /**
+//  * @brief Pitch rate (angular velocity) [milliradians / sec]
+//  */
+// LOG_ADD(LOG_INT16, ratePitch, &stateCompressed.ratePitch)
 
-/**
- * @brief Yaw rate (angular velocity) [milliradians / sec]
- */
-LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
-LOG_GROUP_STOP(stateEstimateZ)
+// /**
+//  * @brief Yaw rate (angular velocity) [milliradians / sec]
+//  */
+// LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
+// LOG_GROUP_STOP(stateEstimateZ)

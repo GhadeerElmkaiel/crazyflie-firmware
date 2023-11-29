@@ -374,7 +374,7 @@ void floatyKalmanCoreInit(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreP
 // }
 
 
-void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise)
+void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise, int state_idx)
 {
   // The Kalman gain as a column vector
   NO_DMA_CCM_SAFE_ZERO_INIT static float K[FKC_STATE_DIM];
@@ -405,24 +405,35 @@ void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_inst
   ASSERT(Hm->numRows == 1);
   ASSERT(Hm->numCols == FKC_STATE_DIM);
 
-  // ====== INNOVATION COVARIANCE ======
+  // ====== Optimized computation ======
 
-  mat_trans(Hm, &HTm);
-  mat_mult(&thi_s->Pm, &HTm, &PHTm); // PH'
   float R = stdMeasNoise*stdMeasNoise;
-  float HPHR = R; // HPH' + R
+  float HPHR = R + thi_s->P[state_idx][state_idx]; // HPH' + R
   for (int i=0; i<FKC_STATE_DIM; i++) { // Add the element of HPH' to the above
-    HPHR += Hm->pData[i]*PHTd[i]; // thi_s obviously only works if the update is scalar (as in thi_s function)
+    K[i] = thi_s->P[state_idx][i]/HPHR; // thi_s obviously only works if the update is scalar (as in thi_s function)
+    thi_s->S[i] = thi_s->S[i] + K[i] * error; // state update    
   }
-  ASSERT(!isnan(HPHR));
 
-  // ====== MEASUREMENT UPDATE ======
-  // Calculate the Kalman gain and perform the state update
-  for (int i=0; i<FKC_STATE_DIM; i++) {
-    K[i] = PHTd[i]/HPHR; // kalman gain = (PH' (HPH' + R )^-1)
-    thi_s->S[i] = thi_s->S[i] + K[i] * error; // state update
-  }
-  assertFloatyStateNotNaN(thi_s);
+
+  // // ====== INNOVATION COVARIANCE ======
+  // mat_trans(Hm, &HTm);
+  // mat_mult(&thi_s->Pm, &HTm, &PHTm); // PH'
+  // float R = stdMeasNoise*stdMeasNoise;
+  // float HPHR = R; // HPH' + R
+  // for (int i=0; i<FKC_STATE_DIM; i++) { // Add the element of HPH' to the above
+  //   HPHR += Hm->pData[i]*PHTd[i]; // thi_s obviously only works if the update is scalar (as in thi_s function)
+  // }
+  // ASSERT(!isnan(HPHR));
+
+  // // ====== MEASUREMENT UPDATE ======
+  // // Calculate the Kalman gain and perform the state update
+  // for (int i=0; i<FKC_STATE_DIM; i++) {
+  //   K[i] = PHTd[i]/HPHR; // kalman gain = (PH' (HPH' + R )^-1)
+  //   thi_s->S[i] = thi_s->S[i] + K[i] * error; // state update
+  // }
+
+  
+  // assertFloatyStateNotNaN(thi_s);
 
 
   // // ====== COVARIANCE UPDATE ======
@@ -536,19 +547,40 @@ void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_inst
     }
   }
 
-  // Setting non diagonal values in the case of position to zero
-  for (int i=0; i<3; i++){
-    for (int j=i+1; j<FKC_STATE_DIM; j++){
-      thi_s->P[i][j] = thi_s->P[j][i] = 0;
-    }
-  }
+  // // Setting non diagonal values in the case of position to zero
+  // for (int i=0; i<3; i++){
+  //   for (int j=i+1; j<FKC_STATE_DIM; j++){
+  //     thi_s->P[i][j] = thi_s->P[j][i] = 0;
+  //   }
+  // }
 
-  // Setting non diagonal values in the case of quaternion to zero
-  for (int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
-    for (int j=i-1; j>2; j--){
-      thi_s->P[i][j] = thi_s->P[j][i] = 0;
-    }
-  }
+  // // Setting non diagonal values in the case of quaternion to zero
+  // for (int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
+  //   for (int j=i-1; j>2; j--){
+  //     thi_s->P[i][j] = thi_s->P[j][i] = 0;
+  //   }
+  // }
+
+  assertFloatyStateNotNaN(thi_s);
+}
+
+
+void floatyKalmanCoreScalarUpdateDiagP(floatyKalmanCoreData_t* thi_s, int state_idx, float error, float stdMeasNoise)
+{
+  // state_idx: is the index of the updated value in the state vector (ex. 0 for x, and 13 for F1 "First flap's angle")
+  // The Kalman gain as a scalar value as one value is actually updated
+  static float K_Scalar;
+  
+  float R = stdMeasNoise*stdMeasNoise;
+  float P_ii = thi_s->P[state_idx][state_idx];
+  float HPHR = R +  P_ii; // HPH' + R
+
+  // ====== MEASUREMENT UPDATE ======
+  // Calculate the Kalman gain and perform the state update
+  K_Scalar = P_ii/HPHR; // kalman gain = (PH' (HPH' + R )^-1)
+  thi_s->S[state_idx] = thi_s->S[state_idx] + K_Scalar * error; // state update
+
+  thi_s->P[state_idx][state_idx] = (1-K_Scalar)*P_ii;
 
   assertFloatyStateNotNaN(thi_s);
 }
@@ -605,7 +637,7 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   A[FKC_STATE_Y][FKC_STATE_PY] = 1;
   A[FKC_STATE_Z][FKC_STATE_PZ] = 1;
 
-  floatyKalmanAerodynamicsParamsCalculation(thi_s, &calculationParameters);
+  // floatyKalmanAerodynamicsParamsCalculation(thi_s, &calculationParameters);
 
   floatyKalmanCalculateAerodynamicForceAndTorque(thi_s->S, thi_s->R, thi_s->R_F_B, &aerodynamicForce, &aerodynamicTorque, &calculationParameters, &H);
 
@@ -677,51 +709,88 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   }
 
 
+  // // Temporary matrices for the covariance updates
+  // NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN1d[FKC_STATE_DIM][FKC_STATE_DIM];
+  // static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN1m = { FKC_STATE_DIM, FKC_STATE_DIM, (float*)tmpNN1d};
+
+  // NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN2d[FKC_STATE_DIM][FKC_STATE_DIM];
+  // static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN2m = { FKC_STATE_DIM, FKC_STATE_DIM, (float*)tmpNN2d};
+
+  // NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN3d[FKC_STATE_DIM][FKC_STATE_DIM];
+  // static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN3m = { FKC_STATE_DIM, FKC_STATE_DIM, (float*)tmpNN3d};
+
+  // // =========== COVARIANCE UPDATE ===========
+  // mat_mult(&Am, &thi_s->Pm, &tmpNN1m); // A P
+  // mat_trans(&Am, &tmpNN2m); // A'
+  // mat_mult(&thi_s->Pm, &tmpNN2m, &tmpNN3m); // P A'
+  // float p;
+
+  // // // =========== OLD COVARIANCE UPDATE ===========
+  // // // Here we update the full matrix which is so computationally expensive
+  // // for(int i=0; i<FKC_STATE_DIM; i++){
+  // //   // Maybe here I can remove half the evluations by usign the fact that P is symmetrical
+  // //   for(int j=0; j<FKC_STATE_DIM; j++){
+  // //     p = thi_s->P[i][j]+dt*(tmpNN1d[i][j] + tmpNN3d[i][j]); // Updating using the first part of P* = AP + PA' + Q
+  // //     thi_s->P[i][j] = p;
+  // //   }
+  // // }
+
+  // // -------------------------------------------------- 
+  // // Here I update using the fact that the uncertainty (P) matrix has only diagonal values for position and Flap angles
+  // // So we do the update for the central block of the matrix and update the diagonal values only for the position and flaps
+  
+  // // Update the position uncertainty values (diag only)
+  // for(int i=0; i<3; i++){
+  //     p = thi_s->P[i][i]+dt*(tmpNN1d[i][i] + tmpNN3d[i][i]); // Updating using the first part of P* = AP + PA' + Q
+  //     thi_s->P[i][i] = p;
+  // }
+
+  // // Update the flaps angle uncertainty values (diag only)
+  // for(int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
+  //     p = thi_s->P[i][i]+dt*(tmpNN1d[i][i] + tmpNN3d[i][i]); // Updating using the first part of P* = AP + PA' + Q
+  //     thi_s->P[i][i] = p;
+  // }
+
+  // for(int i=3; i<FKC_STATE_F1; i++){
+  //   // Maybe here I can remove half the evluations by usign the fact that P is symmetrical
+  //   for(int j=i; j<FKC_STATE_F1; j++){
+  //     p = thi_s->P[i][j]+dt*(tmpNN1d[i][j] + tmpNN3d[i][j]); // Updating using the first part of P* = AP + PA' + Q
+  //     thi_s->P[i][j] = thi_s->P[j][i] = p;
+  //   }
+  // }
+
+
+
   // Temporary matrices for the covariance updates
   NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN1d[FKC_STATE_DIM][FKC_STATE_DIM];
   static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN1m = { FKC_STATE_DIM, FKC_STATE_DIM, (float*)tmpNN1d};
 
-  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN2d[FKC_STATE_DIM][FKC_STATE_DIM];
-  static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN2m = { FKC_STATE_DIM, FKC_STATE_DIM, (float*)tmpNN2d};
-
-  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN3d[FKC_STATE_DIM][FKC_STATE_DIM];
-  static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN3m = { FKC_STATE_DIM, FKC_STATE_DIM, (float*)tmpNN3d};
-
   // =========== COVARIANCE UPDATE ===========
   mat_mult(&Am, &thi_s->Pm, &tmpNN1m); // A P
-  mat_trans(&Am, &tmpNN2m); // A'
-  mat_mult(&thi_s->Pm, &tmpNN2m, &tmpNN3m); // P A'
   float p;
-
-  // for(int i=0; i<FKC_STATE_DIM; i++){
-  //   // Maybe here I can remove half the evluations by usign the fact that P is symmetrical
-  //   for(int j=0; j<FKC_STATE_DIM; j++){
-  //     p = thi_s->P[i][j]+dt*(tmpNN1d[i][j] + tmpNN3d[i][j]); // Updating using the first part of P* = AP + PA' + Q
-  //     thi_s->P[i][j] = p;
-  //   }
-  // }
 
   // -------------------------------------------------- 
   // Here I update using the fact that the uncertainty (P) matrix has only diagonal values for position and Flap angles
   // So we do the update for the central block of the matrix and update the diagonal values only for the position and flaps
+  // Additionally, we use the fact that AP is the transpose of PA' so we don't calculate that again
   
   // Update the position uncertainty values (diag only)
   for(int i=0; i<3; i++){
-      p = thi_s->P[i][i]+dt*(tmpNN1d[i][i] + tmpNN3d[i][i]); // Updating using the first part of P* = AP + PA' + Q
+      p = thi_s->P[i][i]+dt*2*(tmpNN1d[i][i]); // Updating using the first part of P* = AP + PA' + Q
       thi_s->P[i][i] = p;
   }
 
   // Update the flaps angle uncertainty values (diag only)
   for(int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
-      p = thi_s->P[i][i]+dt*(tmpNN1d[i][i] + tmpNN3d[i][i]); // Updating using the first part of P* = AP + PA' + Q
+      p = thi_s->P[i][i]+dt*2*(tmpNN1d[i][i]); // Updating using the first part of P* = AP + PA' + Q
       thi_s->P[i][i] = p;
   }
 
   for(int i=3; i<FKC_STATE_F1; i++){
     // Maybe here I can remove half the evluations by usign the fact that P is symmetrical
-    for(int j=3; j<FKC_STATE_F1; j++){
-      p = thi_s->P[i][j]+dt*(tmpNN1d[i][j] + tmpNN3d[i][j]); // Updating using the first part of P* = AP + PA' + Q
-      thi_s->P[i][j] = p;
+    for(int j=i; j<FKC_STATE_F1; j++){
+      p = thi_s->P[i][j]+dt*(tmpNN1d[i][j] + tmpNN1d[j][i]); // Updating using the first part of P* = AP + PA' + Q
+      thi_s->P[i][j] = thi_s->P[j][i] = p;
     }
   }
 
@@ -926,17 +995,6 @@ void updateBodyRotationMatrixWithQuatValues(float R[3][3], quaternion_t* q){
   R[2][1] = 2*(q2*q3 + q0*q1);
   R[2][2] = 2*(q0*q0 + q3*q3) - 1;
 
-  // thi_s->R[0][0] = 2*(q0*q0 + q1*q1) - 1;
-  // thi_s->R[0][1] = 2*(q1*q2 - q0*q3);
-  // thi_s->R[0][2] = 2*(q1*q3 + q0*q2);
-
-  // thi_s->R[1][0] = 2*(q1*q2 + q0*q3);
-  // thi_s->R[1][1] = 2*(q0*q0 + q2*q2) - 1;
-  // thi_s->R[1][2] = 2*(q2*q3 - q0*q1);
-
-  // thi_s->R[2][0] = 2*(q1*q3 - q0*q2);
-  // thi_s->R[2][1] = 2*(q2*q3 + q0*q1);
-  // thi_s->R[2][2] = 2*(q0*q0 + q3*q3) - 1;
 }
 
 
@@ -1419,6 +1477,10 @@ PARAM_GROUP_START(RandConsts)
   PARAM_ADD_CORE(PARAM_FLOAT, flapHoverAng, &flapHoverAng)
   PARAM_ADD_CORE(PARAM_FLOAT, flapTimeConst, &flapTimeConst)
 
+/**
+ * @brief Set to nonzero to use optimization calculation "NEEDS TO BE IMPLEMENTED"
+ */
   PARAM_ADD_CORE(PARAM_UINT8, useOptCalcs, &useOptCalcs)
+
   
 PARAM_GROUP_STOP(RandConsts)

@@ -195,7 +195,9 @@ void floatyKalmanCoreFinalize(floatyKalmanCoreData_t* coreData, uint32_t tick);
 
 // void kalmanCoreDecoupleXY(kalmanCoreData_t* thi_s);
 
-void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* coreData, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise);
+void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* coreData, arm_matrix_instance_f32 *Hm, float error, float stdMeasNoise, int state_idx);
+
+void floatyKalmanCoreScalarUpdateDiagP(floatyKalmanCoreData_t* thi_s, int state_idx, float error, float stdMeasNoise);
 
 // My functions
 /*  - Externalization to move the filter's internal state into the external state expected by other modules */

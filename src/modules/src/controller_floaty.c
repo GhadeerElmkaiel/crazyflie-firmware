@@ -23,8 +23,10 @@
 
 #  define START_LOOP_CONTROL 2
 #  define CONTROL_TYPE 1
-#  define PWM_MID_VALUE 32767
-#  define MAX_PWM_SIGNAL 65535
+// #  define PWM_MID_VALUE 32767
+// #  define MAX_PWM_SIGNAL 65535
+// #  define MIN_ANG -0.7  // Almost equal to -40 degres
+// #  define MAX_ANG 0.7   // Almost equal to 40 degres
 
 
 
@@ -32,9 +34,14 @@ float control_dt = 1/SYS_ID_RATE;
 // bool loop_was_on = false;
 // uint32_t shift_in_tick = 0;
 
+static float min_f_ang = -0.7;
+static float max_f_ang = 0.7;
+
 static float r_roll;
 static float r_pitch;
 static float r_yaw;
+
+static float ctrl_log[] = {0, 0, 0, 0};
 
 void controllerFloatyInit(void)
 {
@@ -145,16 +152,56 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
     mat_mult(&Km, &tmpNN2m, &tmpNN1m);
 
-    // control->flap_1 = control_m[0];
-    // control->flap_2 = control_m[1];
-    // control->flap_3 = control_m[2];
-    // control->flap_4 = control_m[3];
+    // control->flap_1 = 0;
+    // control->flap_2 = 0;
+    // control->flap_3 = 0;
+    // control->flap_4 = 0;
 
     // Add the hovering angles to the control results
     control->flap_1 = control_m[0] + setpoint->flaps.flap_1;
     control->flap_2 = control_m[1] + setpoint->flaps.flap_2;
     control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
     control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
+
+    ctrl_log[0] = control_m[0];
+    ctrl_log[1] = control_m[1];
+    ctrl_log[2] = control_m[2];
+    ctrl_log[3] = control_m[3];
+
+    if(control->flap_1 < min_f_ang){
+      control->flap_1 = min_f_ang;
+    }
+
+    if(control->flap_1 > max_f_ang){
+      control->flap_1 = max_f_ang;
+    }
+
+
+    if(control->flap_2 < min_f_ang){
+      control->flap_2 = min_f_ang;
+    }
+
+    if(control->flap_2 > max_f_ang){
+      control->flap_2 = max_f_ang;
+    }
+
+
+    if(control->flap_3 < min_f_ang){
+      control->flap_3 = min_f_ang;
+    }
+
+    if(control->flap_3 > max_f_ang){
+      control->flap_3 = max_f_ang;
+    }
+
+
+    if(control->flap_4 < min_f_ang){
+      control->flap_4 = min_f_ang;
+    }
+
+    if(control->flap_4 > max_f_ang){
+      control->flap_4 = max_f_ang;
+    }
     
 
     measurement_t measurement;
@@ -266,3 +313,35 @@ LOG_ADD(LOG_FLOAT, r_yaw, &r_yaw)
 
 LOG_GROUP_STOP(controller)
 
+
+/**
+ * The controller output.
+ */
+LOG_GROUP_START(control)
+/**
+ * @brief The controller output for M1 (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m1, &ctrl_log[0])
+/**
+ * @brief The controller output for M2 (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m2, &ctrl_log[1])
+/**
+ * @brief The controller output for M3 (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m3, &ctrl_log[2])
+/**
+ * @brief The controller output for M4 (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m4, &ctrl_log[3])
+
+/**
+ * @brief The minimum angle for each flap
+ */
+LOG_ADD_CORE(LOG_FLOAT, min_angle, &min_f_ang)
+/**
+ * @brief The maximum angle for each flap
+ */
+LOG_ADD_CORE(LOG_FLOAT, max_angle, &max_f_ang)
+
+LOG_GROUP_STOP(control)
