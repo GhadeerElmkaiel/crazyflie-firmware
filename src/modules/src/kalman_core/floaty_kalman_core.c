@@ -930,6 +930,39 @@ void floatyNormalizeQuat(floatyKalmanCoreData_t* thi_s)
   thi_s->S[FKC_STATE_Q2] = q2/norm;
   thi_s->S[FKC_STATE_Q3] = q3/norm;
 
+  // =========== COVARIANCE PROJECTION PERPENDICULAR TO QUAT ===========
+  // The projected uncertainty matrix is calculated as following
+  // P_quat_proj = ( I - q*q'/|q|^2 ) P_quat
+
+  // The sub matrix of the uncertainty matrix (corrisponding to the quat uncertainty)
+  NO_DMA_CCM_SAFE_ZERO_INIT static float pQuatd[4][4];
+  static __attribute__((aligned(4))) arm_matrix_instance_f32 pQuatm = { 4, 4, (float*)pQuatd};
+
+  // The sub matrix of the uncertainty matrix (corrisponding to the quat uncertainty)
+  NO_DMA_CCM_SAFE_ZERO_INIT static float quatMatd[4][4];
+  static __attribute__((aligned(4))) arm_matrix_instance_f32 quatMatm = { 4, 4, (float*)quatMatd};
+
+  // Temporary matrices for the projection of quaternion uncertainty
+  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN1d[4][4];
+  static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN1m = { 4, 4, (float*)tmpNN1d};
+
+  // Prepare the matrices for multiplication
+  for(int i = 0; i<4; i++){
+    for(int j = i; j<4; j++){
+      pQuatd[i][j] = pQuatd[j][i] = thi_s->P[FKC_STATE_Q0+i][FKC_STATE_Q0+j];
+
+      quatMatd[i][j] = quatMatd[j][i] = thi_s->S[FKC_STATE_Q0+i]*thi_s->S[FKC_STATE_Q0+j];
+    }
+  }
+  mat_mult(&pQuatm, &quatMatm, &tmpNN1m); // (matrix) q*q'/|q|^2 P_quat
+
+
+  for(int i = 0; i<4; i++){
+    for(int j = i; j<4; j++){
+      thi_s->P[FKC_STATE_Q0+i][FKC_STATE_Q0+j] = thi_s->P[FKC_STATE_Q0+j][FKC_STATE_Q0+i] = pQuatd[i][j] - tmpNN1d[i][j];
+    }
+  }
+
   return;
 }
 
