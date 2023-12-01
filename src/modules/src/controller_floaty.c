@@ -163,10 +163,10 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
     control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
 
-    ctrl_log[0] = control_m[0];
-    ctrl_log[1] = control_m[1];
-    ctrl_log[2] = control_m[2];
-    ctrl_log[3] = control_m[3];
+    ctrl_log[0] = control->flap_1;
+    ctrl_log[1] = control->flap_2;
+    ctrl_log[2] = control->flap_3;
+    ctrl_log[3] = control->flap_4;
 
     if(control->flap_1 < min_f_ang){
       control->flap_1 = min_f_ang;

@@ -68,23 +68,41 @@ void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasureme
   float h[FKC_STATE_DIM] = {0};
   arm_matrix_instance_f32 H = {1, FKC_STATE_DIM, h};
 
-  h[FKC_STATE_Q0] = 1;
-  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.w - thi_s->S[FKC_STATE_Q0], pose->stdDevQuat, FKC_STATE_Q0);
+  // h[FKC_STATE_Q0] = 1;
+  // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.w - thi_s->S[FKC_STATE_Q0], pose->stdDevQuat, FKC_STATE_Q0);
 
-  h[FKC_STATE_Q0] = 0;
-  h[FKC_STATE_Q1] = 1;
-  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.x - thi_s->S[FKC_STATE_Q1], pose->stdDevQuat, FKC_STATE_Q1);
+  // h[FKC_STATE_Q0] = 0;
+  // h[FKC_STATE_Q1] = 1;
+  // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.x - thi_s->S[FKC_STATE_Q1], pose->stdDevQuat, FKC_STATE_Q1);
 
-  h[FKC_STATE_Q1] = 0;
-  h[FKC_STATE_Q2] = 1;
-  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.y - thi_s->S[FKC_STATE_Q2], pose->stdDevQuat, FKC_STATE_Q2);
+  // h[FKC_STATE_Q1] = 0;
+  // h[FKC_STATE_Q2] = 1;
+  // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.y - thi_s->S[FKC_STATE_Q2], pose->stdDevQuat, FKC_STATE_Q2);
 
-  h[FKC_STATE_Q2] = 0;
-  h[FKC_STATE_Q3] = 1;
-  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.z - thi_s->S[FKC_STATE_Q3], pose->stdDevQuat, FKC_STATE_Q3);
+  // h[FKC_STATE_Q2] = 0;
+  // h[FKC_STATE_Q3] = 1;
+  // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.z - thi_s->S[FKC_STATE_Q3], pose->stdDevQuat, FKC_STATE_Q3);
   
-  h[FKC_STATE_Q3] = 0;
+  // h[FKC_STATE_Q3] = 0;
   
+
+  h[FKC_STATE_QW] = 1;
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.w - thi_s->S[FKC_STATE_QW], pose->stdDevQuat, FKC_STATE_QW);
+
+  h[FKC_STATE_QW] = 0;
+  h[FKC_STATE_QX] = 1;
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.x - thi_s->S[FKC_STATE_QX], pose->stdDevQuat, FKC_STATE_QX);
+
+  h[FKC_STATE_QX] = 0;
+  h[FKC_STATE_QY] = 1;
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.y - thi_s->S[FKC_STATE_QY], pose->stdDevQuat, FKC_STATE_QY);
+
+  h[FKC_STATE_QY] = 0;
+  h[FKC_STATE_QZ] = 1;
+  floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.z - thi_s->S[FKC_STATE_QZ], pose->stdDevQuat, FKC_STATE_QZ);
+  
+  h[FKC_STATE_QZ] = 0;
+
 
   floatyNormalizeQuat(thi_s);
   updateRotationMatrices(thi_s);

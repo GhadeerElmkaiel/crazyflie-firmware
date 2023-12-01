@@ -186,10 +186,17 @@ void floatyKalmanCoreDefaultParams(floatyKalmanCoreParams_t* params)
   // PI / 2 --- facing positive Y
   // PI --- facing negative X
   // 3 * PI / 2 --- facing negative Y
-  params->initialQ0 = 1.0;
-  params->initialQ1 = 0.0;
-  params->initialQ2 = 0.0;
-  params->initialQ3 = 0.0;
+  // params->initialQ0 = 1.0;
+  // params->initialQ1 = 0.0;
+  // params->initialQ2 = 0.0;
+  // params->initialQ3 = 0.0;
+  
+  // I changed to this as to make sure that there is no confusion with what convension is used
+  params->initialQW = 1.0;
+  params->initialQX = 0.0;
+  params->initialQY = 0.0;
+  params->initialQZ = 0.0;
+
 }
 
 void floatyKalmanCoreInit(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreParams_t *params)
@@ -210,16 +217,17 @@ void floatyKalmanCoreInit(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreP
 //  thi_s->S[KC_STATE_D2] = 0;
 
   // reset the attitude quaternion
-  thi_s->initialQuaternion[0] = params->initialQ0;
-  thi_s->initialQuaternion[1] = params->initialQ1;
-  thi_s->initialQuaternion[2] = params->initialQ2;
-  thi_s->initialQuaternion[3] = params->initialQ3;
+  //This is because in the CF code they use the xyzw ordering
+  thi_s->initialQuaternion[0] = params->initialQX;
+  thi_s->initialQuaternion[1] = params->initialQY;
+  thi_s->initialQuaternion[2] = params->initialQZ;
+  thi_s->initialQuaternion[3] = params->initialQW;
   // for (int i = 0; i < 4; i++) { thi_s->q[i] = thi_s->initialQuaternion[i]; }
 
-  thi_s->S[FKC_STATE_Q0] = params->initialQ0;
-  thi_s->S[FKC_STATE_Q1] = params->initialQ1;
-  thi_s->S[FKC_STATE_Q2] = params->initialQ2;
-  thi_s->S[FKC_STATE_Q3] = params->initialQ3;
+  thi_s->S[FKC_STATE_QX] = params->initialQX;
+  thi_s->S[FKC_STATE_QY] = params->initialQY;
+  thi_s->S[FKC_STATE_QZ] = params->initialQZ;
+  thi_s->S[FKC_STATE_QW] = params->initialQW;
 
   thi_s->S[FKC_STATE_ARX] = 0;
   thi_s->S[FKC_STATE_ARY] = 0;
@@ -977,23 +985,23 @@ void floatyKalmanCoreFinalize(floatyKalmanCoreData_t* thi_s, uint32_t tick)
 
 void updateBodyRotationMatrixWithQuatValues(float R[3][3], quaternion_t* q){
 
-  float q0, q1, q2, q3;
-  q0 = q->q0;
-  q1 = q->q1;
-  q2 = q->q2;
-  q3 = q->q3;
+  float qw, qx, qy, qz;
+  qw = q->w;
+  qx = q->x;
+  qy = q->y;
+  qz = q->z;
   // convert the new attitude to a rotation matrix, such that we can rotate body-frame velocity and acc
-  R[0][0] = 2*(q0*q0 + q1*q1) - 1;
-  R[0][1] = 2*(q1*q2 - q0*q3);
-  R[0][2] = 2*(q1*q3 + q0*q2);
+  R[0][0] = 2*(qw*qw + qx*qx) - 1;
+  R[0][1] = 2*(qx*qy - qw*qz);
+  R[0][2] = 2*(qx*qz + qw*qy);
 
-  R[1][0] = 2*(q1*q2 + q0*q3);
-  R[1][1] = 2*(q0*q0 + q2*q2) - 1;
-  R[1][2] = 2*(q2*q3 - q0*q1);
+  R[1][0] = 2*(qx*qy + qw*qz);
+  R[1][1] = 2*(qw*qw + qy*qy) - 1;
+  R[1][2] = 2*(qy*qz - qw*qx);
 
-  R[2][0] = 2*(q1*q3 - q0*q2);
-  R[2][1] = 2*(q2*q3 + q0*q1);
-  R[2][2] = 2*(q0*q0 + q3*q3) - 1;
+  R[2][0] = 2*(qx*qz - qw*qy);
+  R[2][1] = 2*(qy*qz + qw*qx);
+  R[2][2] = 2*(qw*qw + qz*qz) - 1;
 
 }
 
@@ -1028,23 +1036,23 @@ void updateFlapRotationMatrixWithPhyValues(float R[3][3], float phy, int flap_id
 // A function to update the rotation matrices and the quaternion
 void updateRotationMatrices(floatyKalmanCoreData_t* thi_s){
 
-  float q0, q1, q2, q3;
-  q0 = thi_s->S[FKC_STATE_Q0];
-  q1 = thi_s->S[FKC_STATE_Q1];
-  q2 = thi_s->S[FKC_STATE_Q2];
-  q3 = thi_s->S[FKC_STATE_Q3];
+  float qw, qx, qy, qz;
+  qw = thi_s->S[FKC_STATE_QW];
+  qx = thi_s->S[FKC_STATE_QX];
+  qy = thi_s->S[FKC_STATE_QY];
+  qz = thi_s->S[FKC_STATE_QZ];
   // convert the new attitude to a rotation matrix, such that we can rotate body-frame velocity and acc
-  thi_s->R[0][0] = 2*(q0*q0 + q1*q1) - 1;
-  thi_s->R[0][1] = 2*(q1*q2 - q0*q3);
-  thi_s->R[0][2] = 2*(q1*q3 + q0*q2);
+  thi_s->R[0][0] = 2*(qw*qw + qx*qx) - 1;
+  thi_s->R[0][1] = 2*(qx*qy - qw*qz);
+  thi_s->R[0][2] = 2*(qx*qz + qw*qy);
 
-  thi_s->R[1][0] = 2*(q1*q2 + q0*q3);
-  thi_s->R[1][1] = 2*(q0*q0 + q2*q2) - 1;
-  thi_s->R[1][2] = 2*(q2*q3 - q0*q1);
+  thi_s->R[1][0] = 2*(qx*qy + qw*qz);
+  thi_s->R[1][1] = 2*(qw*qw + qy*qy) - 1;
+  thi_s->R[1][2] = 2*(qy*qz - qw*qx);
 
-  thi_s->R[2][0] = 2*(q1*q3 - q0*q2);
-  thi_s->R[2][1] = 2*(q2*q3 + q0*q1);
-  thi_s->R[2][2] = 2*(q0*q0 + q3*q3) - 1;
+  thi_s->R[2][0] = 2*(qx*qz - qw*qy);
+  thi_s->R[2][1] = 2*(qy*qz + qw*qx);
+  thi_s->R[2][2] = 2*(qw*qw + qz*qz) - 1;
 
 
   // Calculate the flaps to body rotation matrix
@@ -1279,16 +1287,21 @@ void floatyKalmanCalculateStateDerivative(float state[FKC_STATE_DIM], floaty_con
   // intermediate variable to calculate the value Omega x (Inertialmatrix * Omega)
   float omegaCrossImOmega[3];
   float omega[3];
-  float q[4];
+  // float q[4];
+  // q[0] = state[FKC_STATE_Q0];
+  // q[1] = state[FKC_STATE_Q1];
+  // q[2] = state[FKC_STATE_Q2];
+  // q[3] = state[FKC_STATE_Q3];
 
   omega[0]=state[FKC_STATE_ARX];
   omega[1]=state[FKC_STATE_ARY];
   omega[2]=state[FKC_STATE_ARZ];
 
-  q[0] = state[FKC_STATE_Q0];
-  q[1] = state[FKC_STATE_Q1];
-  q[2] = state[FKC_STATE_Q2];
-  q[3] = state[FKC_STATE_Q3];
+  float qw, qx, qy, qz;
+  qw = state[FKC_STATE_QW];
+  qx = state[FKC_STATE_QX];
+  qy = state[FKC_STATE_QY];
+  qz = state[FKC_STATE_QZ];
 
   stateDerivative[FKC_STATE_PX] = aerodynamicForce->x/mass;
   stateDerivative[FKC_STATE_PY] = aerodynamicForce->y/mass;
@@ -1316,10 +1329,16 @@ void floatyKalmanCalculateStateDerivative(float state[FKC_STATE_DIM], floaty_con
   //        w0  0   w2 -w1,
   //        w1 -w2  0   w0,
   //        w2  w1 -w0  0 ]
-  stateDerivative[FKC_STATE_Q0] = -0.5f*(                q[1]*omega[0] + q[2]*omega[1] + q[3]*omega[2]);
-  stateDerivative[FKC_STATE_Q1] =  0.5f*(q[0]*omega[0]                 + q[2]*omega[2] - q[3]*omega[1]);
-  stateDerivative[FKC_STATE_Q2] =  0.5f*(q[0]*omega[1] - q[1]*omega[2]                 + q[3]*omega[0]);
-  stateDerivative[FKC_STATE_Q3] =  0.5f*(q[0]*omega[2] + q[1]*omega[1] - q[2]*omega[0]);
+
+  // stateDerivative[FKC_STATE_Q0] = -0.5f*(                q[1]*omega[0] + q[2]*omega[1] + q[3]*omega[2]);
+  // stateDerivative[FKC_STATE_Q1] =  0.5f*(q[0]*omega[0]                 + q[2]*omega[2] - q[3]*omega[1]);
+  // stateDerivative[FKC_STATE_Q2] =  0.5f*(q[0]*omega[1] - q[1]*omega[2]                 + q[3]*omega[0]);
+  // stateDerivative[FKC_STATE_Q3] =  0.5f*(q[0]*omega[2] + q[1]*omega[1] - q[2]*omega[0]);
+
+  stateDerivative[FKC_STATE_QW] = -0.5f*(              qx*omega[0] + qy*omega[1] + qz*omega[2]);
+  stateDerivative[FKC_STATE_QX] =  0.5f*(qw*omega[0]               + qy*omega[2] - qz*omega[1]);
+  stateDerivative[FKC_STATE_QY] =  0.5f*(qw*omega[1] - qx*omega[2]               + qz*omega[0]);
+  stateDerivative[FKC_STATE_QZ] =  0.5f*(qw*omega[2] + qx*omega[1] - qy*omega[0]              );
 
   stateDerivative[FKC_STATE_F1] = flapTimeConst*(input->flap_1-state[FKC_STATE_F1]);
   stateDerivative[FKC_STATE_F2] = flapTimeConst*(input->flap_2-state[FKC_STATE_F2]);
@@ -1359,9 +1378,9 @@ void floatyKalmanCoreExternalizeState(const floatyKalmanCoreData_t* thi_s, float
   };
 
   // convert the new attitude into Euler YPR
-  float yaw = atan2f(2*(thi_s->S[FKC_STATE_Q1]*thi_s->S[FKC_STATE_Q2]+thi_s->S[FKC_STATE_Q0]*thi_s->S[FKC_STATE_Q3]) , thi_s->S[FKC_STATE_Q0]*thi_s->S[FKC_STATE_Q0] + thi_s->S[FKC_STATE_Q1]*thi_s->S[FKC_STATE_Q1] - thi_s->S[FKC_STATE_Q2]*thi_s->S[FKC_STATE_Q2] - thi_s->S[FKC_STATE_Q3]*thi_s->S[FKC_STATE_Q3]);
-  float pitch = asinf(-2*(thi_s->S[FKC_STATE_Q1]*thi_s->S[FKC_STATE_Q3] - thi_s->S[FKC_STATE_Q0]*thi_s->S[FKC_STATE_Q2]));
-  float roll = atan2f(2*(thi_s->S[FKC_STATE_Q2]*thi_s->S[FKC_STATE_Q3]+thi_s->S[FKC_STATE_Q0]*thi_s->S[FKC_STATE_Q1]) , thi_s->S[FKC_STATE_Q0]*thi_s->S[FKC_STATE_Q0] - thi_s->S[FKC_STATE_Q1]*thi_s->S[FKC_STATE_Q1] - thi_s->S[FKC_STATE_Q2]*thi_s->S[FKC_STATE_Q2] + thi_s->S[FKC_STATE_Q3]*thi_s->S[FKC_STATE_Q3]);
+  float roll = atan2f(2*(thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QY]+thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QZ]) , thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QW] + thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QX] - thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QY] - thi_s->S[FKC_STATE_QZ]*thi_s->S[FKC_STATE_QZ]);
+  float pitch = asinf(-2*(thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QZ] - thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QY]));
+  float yaw = atan2f(2*(thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QZ]+thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QX]) , thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QW] - thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QX] - thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QY] + thi_s->S[FKC_STATE_QZ]*thi_s->S[FKC_STATE_QZ]);
 
   // Save attitude, angles
   state->attitude = (attitude_t){
@@ -1384,16 +1403,22 @@ void floatyKalmanCoreExternalizeState(const floatyKalmanCoreData_t* thi_s, float
       .timestamp = tick
   };
 
-  // I shouldn't use w, x, y, z as in CF code, they are using the x, y, z, w order
+  // // I shouldn't use w, x, y, z as in CF code, they are using the x, y, z, w order
   // state->attitudeQuaternion.w = thi_s->S[FKC_STATE_Q0];
   // state->attitudeQuaternion.x = thi_s->S[FKC_STATE_Q1];
   // state->attitudeQuaternion.y = thi_s->S[FKC_STATE_Q2];
   // state->attitudeQuaternion.z = thi_s->S[FKC_STATE_Q3];
 
-  state->attitudeQuaternion.q0 = thi_s->S[FKC_STATE_Q0];
-  state->attitudeQuaternion.q1 = thi_s->S[FKC_STATE_Q1];
-  state->attitudeQuaternion.q2 = thi_s->S[FKC_STATE_Q2];
-  state->attitudeQuaternion.q3 = thi_s->S[FKC_STATE_Q3];
+  // I Switched to using this to make sure that the qw is the correct qw 
+  state->attitudeQuaternion.w = thi_s->S[FKC_STATE_QW];
+  state->attitudeQuaternion.x = thi_s->S[FKC_STATE_QX];
+  state->attitudeQuaternion.y = thi_s->S[FKC_STATE_QY];
+  state->attitudeQuaternion.z = thi_s->S[FKC_STATE_QZ];
+
+  // state->attitudeQuaternion.q0 = thi_s->S[FKC_STATE_Q0];
+  // state->attitudeQuaternion.q1 = thi_s->S[FKC_STATE_Q1];
+  // state->attitudeQuaternion.q2 = thi_s->S[FKC_STATE_Q2];
+  // state->attitudeQuaternion.q3 = thi_s->S[FKC_STATE_Q3];
 
   state->attitudeRate = (attitude_t){
       .roll = thi_s->S[FKC_STATE_ARX],

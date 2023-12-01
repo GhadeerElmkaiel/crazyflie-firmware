@@ -66,6 +66,12 @@ typedef enum
   FKC_STATE_X, FKC_STATE_Y, FKC_STATE_Z, FKC_STATE_PX, FKC_STATE_PY, FKC_STATE_PZ, FKC_STATE_Q0, FKC_STATE_Q1, FKC_STATE_Q2, FKC_STATE_Q3, FKC_STATE_ARX, FKC_STATE_ARY, FKC_STATE_ARZ, FKC_STATE_F1, FKC_STATE_F2, FKC_STATE_F3, FKC_STATE_F4, FKC_STATE_DIM
 } floatyKalmanCoreStateIdx_t;
 
+// I use this structure as it is the structure used by the CF
+#define FKC_STATE_QX FKC_STATE_Q0
+#define FKC_STATE_QY FKC_STATE_Q1
+#define FKC_STATE_QZ FKC_STATE_Q2
+#define FKC_STATE_QW FKC_STATE_Q3
+
 // The data used by the floaty kalman core implementation.
 typedef struct {
   /**
@@ -132,10 +138,10 @@ typedef struct {
   float initialY;
   float initialZ;
 
-  float initialQ0;
-  float initialQ1;
-  float initialQ2;
-  float initialQ3;
+  float initialQW;
+  float initialQX;
+  float initialQY;
+  float initialQZ;
 } floatyKalmanCoreParams_t;
 
 // The parameters used by the filter

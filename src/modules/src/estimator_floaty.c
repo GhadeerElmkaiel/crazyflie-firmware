@@ -216,10 +216,6 @@ bool estimatorFloatyKalmanTaskTest() {
 static void floatyKalmanTask(void* parameters) {
   systemWaitStart();
 
-  // ledSet(LED_RED_R, 1);
-  // vTaskDelay(500);
-  // ledSet(LED_RED_R, 0);
-
 
   uint32_t lastPrediction = xTaskGetTickCount();
   uint32_t nextPrediction = xTaskGetTickCount();
@@ -236,10 +232,15 @@ static void floatyKalmanTask(void* parameters) {
     TaskHandle_t xCurrentTaskHandle = xTaskGetCurrentTaskHandle();
 
     stackHighWaterMark = uxTaskGetStackHighWaterMark(xCurrentTaskHandle);
-    // If the client triggers an estimator reset via parameter update
-    if (resetFLoatyEstimation) {
+    // // If the client triggers an estimator reset via parameter update
+    // if (resetFLoatyEstimation) {
+    //   estimatorFloatyKalmanInit();
+    //   resetFLoatyEstimation = false;
+    // }
+    
+    if (resetKalman>0) {
       estimatorFloatyKalmanInit();
-      resetFLoatyEstimation = false;
+      resetKalman = 0;
     }
 
     // Tracks whether an update to the state has been made, and the state therefore requires finalization
@@ -347,10 +348,10 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
     return false;
   }
 
-  if(resetKalman!=0){
-    floatyKalmanCoreInit(&floatyCoreData, &coreParams);
-    resetKalman=0;
-  }
+  // if(resetKalman!=0){
+  //   floatyKalmanCoreInit(&floatyCoreData, &coreParams);
+  //   resetKalman=0;
+  // }
 
   // gyro is in deg/sec but the estimator requires rad/sec
   Axis3f gyroAverage;
