@@ -45,6 +45,12 @@ void floatyKalmanCoreUpdateWithGyro(floatyKalmanCoreData_t* thi_s, Axis3f *gyro)
   // stackHighWaterMark = uxTaskGetStackHighWaterMark(xCurrentTaskHandle);
    
 
+  // Rotate the gyro information to match Floaty's frame
+  // As the gyro system is rotated 45 degrees from floatys frame
+  float gyro_floaty_x = 0.7071*(gyro->y + gyro->x);
+  float gyro_floaty_y = 0.7071*(gyro->y - gyro->x);
+
+
   h[FKC_STATE_ARX] = 1;
   floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->x - thi_s->S[FKC_STATE_ARX], stdGyro, FKC_STATE_ARX);
   h[FKC_STATE_ARX] = 0;

@@ -42,11 +42,16 @@
 #endif
 
 
-static int16_t motShift1 = 550;
-static int16_t motShift2 = -5200;
-static int16_t motShift3 = 5200;
-static int16_t motShift4 = 4200;
+// static int16_t motShift1 = 550;
+// static int16_t motShift2 = -5200;
+// static int16_t motShift3 = 5200;
+// static int16_t motShift4 = 4200;
 
+
+static int16_t motShift1 = -13000;
+static int16_t motShift2 = -4800;
+static int16_t motShift3 = -8000;
+static int16_t motShift4 = 4500;
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 

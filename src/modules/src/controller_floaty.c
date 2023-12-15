@@ -30,18 +30,23 @@
 
 
 
-float control_dt = 1/SYS_ID_RATE;
+float control_dt = 1.0/SYS_ID_RATE;
 // bool loop_was_on = false;
 // uint32_t shift_in_tick = 0;
 
-static float min_f_ang = -0.7;
-static float max_f_ang = 0.7;
+// static float min_f_ang = -0.7;
+// static float max_f_ang = 0.7;
+
+static float min_f_ang = -0.6;
+static float max_f_ang = 0.6;
 
 static float r_roll;
 static float r_pitch;
 static float r_yaw;
 
 static float ctrl_log[] = {0, 0, 0, 0};
+static float ext_ctrl[] = {0, 0, 0, 0};
+static bool manual = true;
 
 void controllerFloatyInit(void)
 {
@@ -163,6 +168,14 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
     control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
 
+    if(manual){
+      control->flap_1 = ext_ctrl[0];
+      control->flap_2 = ext_ctrl[1];
+      control->flap_3 = ext_ctrl[2];
+      control->flap_4 = ext_ctrl[3];
+    }
+
+
     ctrl_log[0] = control->flap_1;
     ctrl_log[1] = control->flap_2;
     ctrl_log[2] = control->flap_3;
@@ -206,10 +219,15 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
     measurement_t measurement;
     measurement.type = FloatyInputAnglesUpdate;
-    measurement.data.flapsAngles.flap_1 = (control_m[0]- state->flaps.flap_1)*flapTimeConst*control_dt + state->flaps.flap_1;
-    measurement.data.flapsAngles.flap_2 = (control_m[1]- state->flaps.flap_2)*flapTimeConst*control_dt + state->flaps.flap_2;
-    measurement.data.flapsAngles.flap_3 = (control_m[2]- state->flaps.flap_3)*flapTimeConst*control_dt + state->flaps.flap_3;
-    measurement.data.flapsAngles.flap_4 = (control_m[3]- state->flaps.flap_4)*flapTimeConst*control_dt + state->flaps.flap_4;
+    // measurement.data.flapsAngles.flap_1 = (control_m[0]- state->flaps.flap_1)*flapTimeConst*control_dt + state->flaps.flap_1;
+    // measurement.data.flapsAngles.flap_2 = (control_m[1]- state->flaps.flap_2)*flapTimeConst*control_dt + state->flaps.flap_2;
+    // measurement.data.flapsAngles.flap_3 = (control_m[2]- state->flaps.flap_3)*flapTimeConst*control_dt + state->flaps.flap_3;
+    // measurement.data.flapsAngles.flap_4 = (control_m[3]- state->flaps.flap_4)*flapTimeConst*control_dt + state->flaps.flap_4;
+
+    measurement.data.flapsAngles.flap_1 = (control->flap_1- state->flaps.flap_1)*flapTimeConst*control_dt + state->flaps.flap_1;
+    measurement.data.flapsAngles.flap_2 = (control->flap_2- state->flaps.flap_2)*flapTimeConst*control_dt + state->flaps.flap_2;
+    measurement.data.flapsAngles.flap_3 = (control->flap_3- state->flaps.flap_3)*flapTimeConst*control_dt + state->flaps.flap_3;
+    measurement.data.flapsAngles.flap_4 = (control->flap_4- state->flaps.flap_4)*flapTimeConst*control_dt + state->flaps.flap_4;
     estimatorEnqueue(&measurement);
 
     r_roll = state->attitude.roll;
@@ -345,3 +363,32 @@ LOG_ADD_CORE(LOG_FLOAT, min_angle, &min_f_ang)
 LOG_ADD_CORE(LOG_FLOAT, max_angle, &max_f_ang)
 
 LOG_GROUP_STOP(control)
+
+
+/**
+ * Logging variables for the command and reference signals for the
+ * altitude PID controller
+ */
+PARAM_GROUP_START(extCtrl)
+/**
+ * @brief The controller output for M1 (in Radian)
+ */
+  PARAM_ADD_CORE(LOG_UINT8, manual, &manual)
+/**
+ * @brief The controller output for M1 (in Radian)
+ */
+  PARAM_ADD_CORE(LOG_FLOAT, m1, &ext_ctrl[0])
+/**
+ * @brief The controller output for M2 (in Radian)
+ */
+  PARAM_ADD_CORE(LOG_FLOAT, m2, &ext_ctrl[1])
+/**
+ * @brief The controller output for M3 (in Radian)
+ */
+  PARAM_ADD_CORE(LOG_FLOAT, m3, &ext_ctrl[2])
+/**
+ * @brief The controller output for M4 (in Radian)
+ */
+  PARAM_ADD_CORE(LOG_FLOAT, m4, &ext_ctrl[3])
+
+PARAM_GROUP_STOP(extCtrl)

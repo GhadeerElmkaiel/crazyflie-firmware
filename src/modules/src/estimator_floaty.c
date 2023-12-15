@@ -306,7 +306,7 @@ static void floatyKalmanTask(void* parameters) {
       floatyKalmanCoreFinalize(&floatyCoreData, osTick);
       STATS_CNT_RATE_EVENT(&finalizeCounter);
       if (! floatyKalmanSupervisorIsStateWithinBounds(&floatyCoreData)) {
-        resetFLoatyEstimation = true;
+        resetKalman = true;
 
         if (osTick > warningBlockTime) {
           warningBlockTime = osTick + WARNING_HOLD_BACK_TIME;

@@ -159,8 +159,8 @@ static void assertFloatyStateNotNaN(const floatyKalmanCoreData_t* thi_s)
 void floatyKalmanCoreDefaultParams(floatyKalmanCoreParams_t* params)
 {
   // Initial variances, uncertain of position, but know we're stationary and roughly flat
-  params->stdDevInitialPosition =0.5;
-  params->stdDevInitialVelocity = 0.01;
+  params->stdDevInitialPosition =0.3;
+  params->stdDevInitialVelocity = 0.5;
   params->stdDevInitialAttitude = 0.01;
   params->stdDevInitialAngVelocity = 0.01;
   params->stdDevInitialFlaps = 0.01;
@@ -578,17 +578,25 @@ void floatyKalmanCoreScalarUpdateDiagP(floatyKalmanCoreData_t* thi_s, int state_
   // state_idx: is the index of the updated value in the state vector (ex. 0 for x, and 13 for F1 "First flap's angle")
   // The Kalman gain as a scalar value as one value is actually updated
   static float K_Scalar;
+  static float K_Scalar_i3;
   
   float R = stdMeasNoise*stdMeasNoise;
   float P_ii = thi_s->P[state_idx][state_idx];
+  float P_i3 = 0.5*(thi_s->P[state_idx][state_idx+3] + thi_s->P[state_idx+3][state_idx]);
+  float P_33 = thi_s->P[state_idx+3][state_idx+3];
   float HPHR = R +  P_ii; // HPH' + R
 
   // ====== MEASUREMENT UPDATE ======
   // Calculate the Kalman gain and perform the state update
   K_Scalar = P_ii/HPHR; // kalman gain = (PH' (HPH' + R )^-1)
   thi_s->S[state_idx] = thi_s->S[state_idx] + K_Scalar * error; // state update
-
   thi_s->P[state_idx][state_idx] = (1-K_Scalar)*P_ii;
+
+  // ====== UPDATE VELOCITY ======
+  K_Scalar_i3 = P_i3/HPHR; // kalman gain for velocity value = (PH' (HPH' + R )^-1)
+  thi_s->S[state_idx+3] = thi_s->S[state_idx+3] + K_Scalar_i3 * error; // state update
+  thi_s->P[state_idx][state_idx+3] = thi_s->P[state_idx+3][state_idx] = P_i3 - 0.5*(K_Scalar*P_i3 + K_Scalar_i3*P_ii);
+  thi_s->P[state_idx+3][state_idx+3] = P_33 - 0.5*(K_Scalar*P_i3 + K_Scalar_i3*P_ii);
 
   assertFloatyStateNotNaN(thi_s);
 }
@@ -782,10 +790,14 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   // So we do the update for the central block of the matrix and update the diagonal values only for the position and flaps
   // Additionally, we use the fact that AP is the transpose of PA' so we don't calculate that again
   
-  // Update the position uncertainty values (diag only)
+  // Update the position uncertainty values (diag only) Then corulated values between position and velocity
   for(int i=0; i<3; i++){
       p = thi_s->P[i][i]+dt*2*(tmpNN1d[i][i]); // Updating using the first part of P* = AP + PA' + Q
       thi_s->P[i][i] = p;
+
+      // update the corulated uncertainty for velocity and position
+      p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]) +dt*(tmpNN1d[i][i+3]+tmpNN1d[i+3][i]); // Updating using the first part of P* = AP + PA' + Q
+      thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
   }
 
   // Update the flaps angle uncertainty values (diag only)
@@ -864,6 +876,17 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
         thi_s->P[i][i] = MAX_COVARIANCE;
       } else if (p < MIN_COVARIANCE ) {
         thi_s->P[i][i] = MIN_COVARIANCE;
+      }
+
+      // Updating the correlated uncertainty for the velocity and position information
+      p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]); 
+      if (isnan(p) || p > MAX_COVARIANCE) {
+        thi_s->P[i][i+3] = thi_s->P[i+3][i] = MAX_COVARIANCE;
+      } else if (p < MIN_COVARIANCE ) {
+        thi_s->P[i][i+3] = thi_s->P[i+3][i] = MIN_COVARIANCE;
+      }
+      else{
+        thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
       }
   }
 

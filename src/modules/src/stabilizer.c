@@ -722,22 +722,38 @@ LOG_ADD_CORE(LOG_FLOAT, ay, &floaty_state.acc.y)
 LOG_ADD_CORE(LOG_FLOAT, az, &floaty_state.acc.z)
 
 /**
+ * @brief Attitude, roll angle 
+ */
+LOG_ADD_CORE(LOG_FLOAT, roll, &floaty_state.attitude.roll)
+
+/**
+ * @brief Attitude, pitch angle 
+ */
+LOG_ADD_CORE(LOG_FLOAT, pitch, &floaty_state.attitude.pitch)
+
+/**
+ * @brief Attitude, yaw angle 
+ */
+LOG_ADD_CORE(LOG_FLOAT, yaw, &floaty_state.attitude.yaw)
+
+
+/**
  * @brief Attitude, roll angle [deg]
  */
 // LOG_ADD_CORE(LOG_FLOAT, roll, &floaty_state.attitude.roll)
-LOG_ADD_CORE(LOG_FLOAT, roll, &roll_degs)
+LOG_ADD_CORE(LOG_FLOAT, roll_deg, &roll_degs)
 
 /**
- * @brief Attitude, pitch angle (legacy CF2 body coordinate system, where pitch is inverted) [deg]
+ * @brief Attitude, pitch angle [deg]
  */
 // LOG_ADD_CORE(LOG_FLOAT, pitch, &floaty_state.attitude.pitch)
-LOG_ADD_CORE(LOG_FLOAT, pitch, &pitch_degs)
+LOG_ADD_CORE(LOG_FLOAT, pitch_deg, &pitch_degs)
 
 /**
  * @brief Attitude, yaw angle [deg]
  */
 // LOG_ADD_CORE(LOG_FLOAT, yaw, &floaty_state.attitude.yaw)
-LOG_ADD_CORE(LOG_FLOAT, yaw, &yaw_degs)
+LOG_ADD_CORE(LOG_FLOAT, yaw_deg, &yaw_degs)
 
 /**
  * @brief Attitude as a quaternion, x
@@ -758,6 +774,27 @@ LOG_ADD_CORE(LOG_FLOAT, qz, &floaty_state.attitudeQuaternion.z)
  * @brief Attitude as a quaternion, w
  */
 LOG_ADD_CORE(LOG_FLOAT, qw, &floaty_state.attitudeQuaternion.w)
+
+/**
+ * @brief Flap 1 angle
+ */
+LOG_ADD_CORE(LOG_FLOAT, flap_1, &floaty_state.flaps.flap_1)
+
+/**
+ * @brief Flap 2 angle
+ */
+LOG_ADD_CORE(LOG_FLOAT, flap_2, &floaty_state.flaps.flap_2)
+
+/**
+ * @brief Flap 3 angle
+ */
+LOG_ADD_CORE(LOG_FLOAT, flap_3, &floaty_state.flaps.flap_3)
+
+/**
+ * @brief Flap 4 angle
+ */
+LOG_ADD_CORE(LOG_FLOAT, flap_4, &floaty_state.flaps.flap_4)
+
 LOG_GROUP_STOP(stateEstimate)
 
 /**
