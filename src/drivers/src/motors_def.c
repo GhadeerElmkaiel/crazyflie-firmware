@@ -730,6 +730,7 @@ const MotorPerifDef* motorMapDefaultBrushed[NBR_OF_MOTORS] =
  * M3 -> IO2
  * M4 -> RX2
  */
+// Used by Floaty 
 const MotorPerifDef* motorMapBigQuadDeck[NBR_OF_MOTORS] =
 {
   &MOTORS_PA2_TIM2_CH3_BRUSHLESS_OD,

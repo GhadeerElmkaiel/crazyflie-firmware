@@ -170,6 +170,12 @@ void floatyKalmanCoreInit(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreP
 // Barometer
 void floatyKalmanCoreUpdateWithBaro(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreParams_t *params, float baroAsl, bool quadIsFlying);
 
+// A function to calculate quaternion from euler angles
+void eulerToQUat(attitude_t* attitude, quaternion_t* q);
+
+// A function that returns a CoreData from a state
+void getCoreDataFromState(floatyKalmanCoreData_t* thi_s, floaty_state_t *state);
+
 /*
  * A function to calculate the aerodynamic force and torque vectors
  * - The H parameter is to be used in the future for optimization porpuses. It surves 

@@ -722,6 +722,21 @@ LOG_ADD_CORE(LOG_FLOAT, ay, &floaty_state.acc.y)
 LOG_ADD_CORE(LOG_FLOAT, az, &floaty_state.acc.z)
 
 /**
+ * @brief The angular rate of roll angle
+ */
+LOG_ADD_CORE(LOG_FLOAT, roll_rate, &floaty_state.attitudeRate.roll)
+
+/**
+ * @brief The angular rate of pitch angle
+ */
+LOG_ADD_CORE(LOG_FLOAT, pitch_rate, &floaty_state.attitudeRate.pitch)
+
+/**
+ * @brief The angular rate of yaw angle
+ */
+LOG_ADD_CORE(LOG_FLOAT, yaw_rate, &floaty_state.attitudeRate.yaw)
+
+/**
  * @brief Attitude, roll angle 
  */
 LOG_ADD_CORE(LOG_FLOAT, roll, &floaty_state.attitude.roll)

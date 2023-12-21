@@ -13,7 +13,8 @@
 #include "cf_math.h"
 #include "estimator.h"
 
-// #include "command_lookup_table.h"
+#include "floaty_kalman_core.h"
+#include "command_lookup_table.h"
 #include "LQR_control_matrix.h"
 #include "floaty_params.h"
 #include <stdio.h>
@@ -37,16 +38,26 @@ float control_dt = 1.0/SYS_ID_RATE;
 // static float min_f_ang = -0.7;
 // static float max_f_ang = 0.7;
 
-static float min_f_ang = -0.6;
-static float max_f_ang = 0.6;
+static float min_f_ang = -1.11;
+static float max_f_ang = 1.11;
 
-static float r_roll;
-static float r_pitch;
-static float r_yaw;
+static int table_iter = 0;
 
-static float ctrl_log[] = {0, 0, 0, 0};
-static float ext_ctrl[] = {0, 0, 0, 0};
-static bool manual = true;
+// static float r_roll;
+// static float r_pitch;
+// static float r_yaw;
+
+static float ctrl_output_log[] = {0, 0, 0, 0};
+static float ctrl_motor_log[] = {0, 0, 0, 0};
+// static float ext_ctrl[] = {0, 0, 0, 0};
+static float ext_ctrl_m1 = 0.0;
+static float ext_ctrl_m2 = 0.0;
+static float ext_ctrl_m3 = 0.0;
+static float ext_ctrl_m4 = 0.0;
+static uint8_t manual = 1;
+
+static floaty_control_t* input_last;
+static floaty_control_t* input_b_last;
 
 void controllerFloatyInit(void)
 {
@@ -84,6 +95,11 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     NO_DMA_CCM_SAFE_ZERO_INIT static float error_m[F_ERR_DIM];
     static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN2m = { F_ERR_DIM, 1, (float *)error_m};
   
+    // floatyKalmanCoreData_t* coreData;
+    // getCoreDataFromState(coreData, state);
+    // float dt = 0.01;
+    // floatyControlDelayCompensation(coreData, input_b_last, dt);
+    // floatyControlDelayCompensation(coreData, input_last, dt);
 
     // Update error
     error_m[F_ERR_X] = setpoint->position.x - state->position.x;
@@ -168,18 +184,38 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
     control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
 
-    if(manual){
-      control->flap_1 = ext_ctrl[0];
-      control->flap_2 = ext_ctrl[1];
-      control->flap_3 = ext_ctrl[2];
-      control->flap_4 = ext_ctrl[3];
+    if(manual==1){
+      control->flap_1 = ext_ctrl_m1;
+      control->flap_2 = ext_ctrl_m2;
+      control->flap_3 = ext_ctrl_m3;
+      control->flap_4 = ext_ctrl_m4;
+    }
+    if(manual==2){
+      control->flap_1 = FLAP_1_HOVER_ANGLE;
+      control->flap_2 = FLAP_2_HOVER_ANGLE;
+      control->flap_3 = FLAP_3_HOVER_ANGLE;
+      control->flap_4 = FLAP_4_HOVER_ANGLE;
+    }
+    if(manual==3){
+
+      control->flap_1 = sin_table[table_iter];
+      table_iter = (table_iter+20)%table_size;
+      // control->flap_1 = ext_ctrl_m1;
+      control->flap_2 = 0.0;
+      control->flap_3 = 0.0;
+      control->flap_4 = 0.0;
     }
 
 
-    ctrl_log[0] = control->flap_1;
-    ctrl_log[1] = control->flap_2;
-    ctrl_log[2] = control->flap_3;
-    ctrl_log[3] = control->flap_4;
+    // ctrl_output_log[0] = control->flap_1;
+    // ctrl_output_log[1] = control->flap_2;
+    // ctrl_output_log[2] = control->flap_3;
+    // ctrl_output_log[3] = control->flap_4;
+
+    ctrl_output_log[0] = control_m[0];
+    ctrl_output_log[1] = control_m[1];
+    ctrl_output_log[2] = control_m[2];
+    ctrl_output_log[3] = control_m[3];
 
     if(control->flap_1 < min_f_ang){
       control->flap_1 = min_f_ang;
@@ -219,20 +255,34 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
     measurement_t measurement;
     measurement.type = FloatyInputAnglesUpdate;
-    // measurement.data.flapsAngles.flap_1 = (control_m[0]- state->flaps.flap_1)*flapTimeConst*control_dt + state->flaps.flap_1;
-    // measurement.data.flapsAngles.flap_2 = (control_m[1]- state->flaps.flap_2)*flapTimeConst*control_dt + state->flaps.flap_2;
-    // measurement.data.flapsAngles.flap_3 = (control_m[2]- state->flaps.flap_3)*flapTimeConst*control_dt + state->flaps.flap_3;
-    // measurement.data.flapsAngles.flap_4 = (control_m[3]- state->flaps.flap_4)*flapTimeConst*control_dt + state->flaps.flap_4;
+    // measurement.data.flapsAngles.flap_1 = (control->flap_1- state->flaps.flap_1)*flapTimeConst*control_dt + state->flaps.flap_1;
+    // measurement.data.flapsAngles.flap_2 = (control->flap_2- state->flaps.flap_2)*flapTimeConst*control_dt + state->flaps.flap_2;
+    // measurement.data.flapsAngles.flap_3 = (control->flap_3- state->flaps.flap_3)*flapTimeConst*control_dt + state->flaps.flap_3;
+    // measurement.data.flapsAngles.flap_4 = (control->flap_4- state->flaps.flap_4)*flapTimeConst*control_dt + state->flaps.flap_4;
 
-    measurement.data.flapsAngles.flap_1 = (control->flap_1- state->flaps.flap_1)*flapTimeConst*control_dt + state->flaps.flap_1;
-    measurement.data.flapsAngles.flap_2 = (control->flap_2- state->flaps.flap_2)*flapTimeConst*control_dt + state->flaps.flap_2;
-    measurement.data.flapsAngles.flap_3 = (control->flap_3- state->flaps.flap_3)*flapTimeConst*control_dt + state->flaps.flap_3;
-    measurement.data.flapsAngles.flap_4 = (control->flap_4- state->flaps.flap_4)*flapTimeConst*control_dt + state->flaps.flap_4;
+    measurement.data.flapsAngles.flap_1 = control->flap_1;
+    measurement.data.flapsAngles.flap_2 = control->flap_2;
+    measurement.data.flapsAngles.flap_3 = control->flap_3;
+    measurement.data.flapsAngles.flap_4 = control->flap_4;
     estimatorEnqueue(&measurement);
 
-    r_roll = state->attitude.roll;
-    r_pitch = state->attitude.pitch;
-    r_yaw = state->attitude.yaw;
+    ctrl_motor_log[0] = control->flap_1;
+    ctrl_motor_log[1] = control->flap_2;
+    ctrl_motor_log[2] = control->flap_3;
+    ctrl_motor_log[3] = control->flap_4;
+
+    input_b_last->flap_1 = input_last->flap_1;
+    input_b_last->flap_2 = input_last->flap_2;
+    input_b_last->flap_3 = input_last->flap_3;
+    input_b_last->flap_4 = input_last->flap_4;
+
+    input_last->flap_1 = control->flap_1;
+    input_last->flap_2 = control->flap_2;
+    input_last->flap_3 = control->flap_3;
+    input_last->flap_4 = control->flap_4;
+    // r_roll = state->attitude.roll;
+    // r_pitch = state->attitude.pitch;
+    // r_yaw = state->attitude.yaw;
   }
   
 
@@ -312,46 +362,61 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
 
 /**
- * Logging variables for the command and reference signals for the
- * altitude PID controller
+ * Logging the output values of the controller.
  */
 LOG_GROUP_START(controller)
+// /**
+//  * @brief Gyro roll measurement in radians
+//  */
+// LOG_ADD(LOG_FLOAT, r_roll, &r_roll)
+// /**
+//  * @brief Gyro pitch measurement in radians
+//  */
+// LOG_ADD(LOG_FLOAT, r_pitch, &r_pitch)
+// /**
+//  * @brief Yaw  measurement in radians
+//  */
+// LOG_ADD(LOG_FLOAT, r_yaw, &r_yaw)
 /**
- * @brief Gyro roll measurement in radians
+ * @brief The controller output for M1 (in Radian)
  */
-LOG_ADD(LOG_FLOAT, r_roll, &r_roll)
+LOG_ADD(LOG_FLOAT, m1, &ctrl_output_log[0])
 /**
- * @brief Gyro pitch measurement in radians
+ * @brief The controller output for M2 (in Radian)
  */
-LOG_ADD(LOG_FLOAT, r_pitch, &r_pitch)
+LOG_ADD(LOG_FLOAT, m2, &ctrl_output_log[1])
 /**
- * @brief Yaw  measurement in radians
+ * @brief The controller output for M3 (in Radian)
  */
-LOG_ADD(LOG_FLOAT, r_yaw, &r_yaw)
+LOG_ADD(LOG_FLOAT, m3, &ctrl_output_log[2])
+/**
+ * @brief The controller output for M4 (in Radian)
+ */
+LOG_ADD(LOG_FLOAT, m4, &ctrl_output_log[3])
 
 LOG_GROUP_STOP(controller)
 
 
 /**
- * The controller output.
+ * The command that get to the motors
  */
-LOG_GROUP_START(control)
+LOG_GROUP_START(motors_ctrp)
 /**
- * @brief The controller output for M1 (in Radian)
+ * @brief The control that M1 gets (in Radian)
  */
-LOG_ADD_CORE(LOG_FLOAT, m1, &ctrl_log[0])
+LOG_ADD_CORE(LOG_FLOAT, m1, &ctrl_motor_log[0])
 /**
- * @brief The controller output for M2 (in Radian)
+ * @brief The control that M2 gets (in Radian)
  */
-LOG_ADD_CORE(LOG_FLOAT, m2, &ctrl_log[1])
+LOG_ADD_CORE(LOG_FLOAT, m2, &ctrl_motor_log[1])
 /**
- * @brief The controller output for M3 (in Radian)
+ * @brief The control that M3 gets (in Radian)
  */
-LOG_ADD_CORE(LOG_FLOAT, m3, &ctrl_log[2])
+LOG_ADD_CORE(LOG_FLOAT, m3, &ctrl_motor_log[2])
 /**
- * @brief The controller output for M4 (in Radian)
+ * @brief The control that M4 gets (in Radian)
  */
-LOG_ADD_CORE(LOG_FLOAT, m4, &ctrl_log[3])
+LOG_ADD_CORE(LOG_FLOAT, m4, &ctrl_motor_log[3])
 
 /**
  * @brief The minimum angle for each flap
@@ -362,7 +427,7 @@ LOG_ADD_CORE(LOG_FLOAT, min_angle, &min_f_ang)
  */
 LOG_ADD_CORE(LOG_FLOAT, max_angle, &max_f_ang)
 
-LOG_GROUP_STOP(control)
+LOG_GROUP_STOP(motors_ctrp)
 
 
 /**
@@ -371,24 +436,28 @@ LOG_GROUP_STOP(control)
  */
 PARAM_GROUP_START(extCtrl)
 /**
- * @brief The controller output for M1 (in Radian)
+ * @brief A parameter to set the type of the control
  */
   PARAM_ADD_CORE(LOG_UINT8, manual, &manual)
 /**
  * @brief The controller output for M1 (in Radian)
  */
-  PARAM_ADD_CORE(LOG_FLOAT, m1, &ext_ctrl[0])
+  // PARAM_ADD_CORE(LOG_FLOAT, m1, &ext_ctrl[0])
+  PARAM_ADD_CORE(LOG_FLOAT, m1, &ext_ctrl_m1)
 /**
  * @brief The controller output for M2 (in Radian)
  */
-  PARAM_ADD_CORE(LOG_FLOAT, m2, &ext_ctrl[1])
+  // PARAM_ADD_CORE(LOG_FLOAT, m2, &ext_ctrl[1])
+  PARAM_ADD_CORE(LOG_FLOAT, m2, &ext_ctrl_m2)
 /**
  * @brief The controller output for M3 (in Radian)
  */
-  PARAM_ADD_CORE(LOG_FLOAT, m3, &ext_ctrl[2])
+  // PARAM_ADD_CORE(LOG_FLOAT, m3, &ext_ctrl[2])
+  PARAM_ADD_CORE(LOG_FLOAT, m3, &ext_ctrl_m3)
 /**
  * @brief The controller output for M4 (in Radian)
  */
-  PARAM_ADD_CORE(LOG_FLOAT, m4, &ext_ctrl[3])
+  // PARAM_ADD_CORE(LOG_FLOAT, m4, &ext_ctrl[3])
+  PARAM_ADD_CORE(LOG_FLOAT, m4, &ext_ctrl_m4)
 
 PARAM_GROUP_STOP(extCtrl)

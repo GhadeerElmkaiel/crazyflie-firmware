@@ -148,7 +148,7 @@ NO_DMA_CCM_SAFE_ZERO_INIT static floatyKalmanCoreData_t floatyCoreData;
 
 static bool isInit = false;
 
-static uint8_t resetKalman =0;
+static uint8_t resetKalman = 1;
 
 static Axis3f accAccumulator;
 static Axis3f gyroAccumulator;

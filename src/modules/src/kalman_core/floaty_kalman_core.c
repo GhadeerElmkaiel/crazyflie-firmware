@@ -94,7 +94,7 @@ float flapArea = 0.0116;
 float mass = 0.21;
 float airflowSpeed = 8.1;
 float gravityAcc = 9.81;
-float flapTimeConst = 10;
+float flapTimeConst = 20;
 const float inertialMatrixDiag[3] = {0.000943, 0.000943, 0.0019};
 float inertialMatrixInvDiag[3] = {1060, 1060, 530};
 // float inertialMatrixInvDiag[3] = {1/inertialMatrixDiag[0], 1/inertialMatrixDiag[1], 1/inertialMatrixDiag[2]};
@@ -607,7 +607,80 @@ void floatyKalmanCoreUpdateWithBaro(floatyKalmanCoreData_t *thi_s, const floatyK
   return;
 }
 
-// void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* input, Axis3f *acc, Axis3f *gyro, float dt, bool quadIsFlying, const floatyKalmanCoreParams_t *params)
+void eulerToQUat(attitude_t* attitude, quaternion_t* q)
+{
+  
+  float cy = cos(attitude->yaw * 0.5);
+  float sy = sin(attitude->yaw * 0.5);
+  float cp = cos(attitude->pitch * 0.5);
+  float sp = sin(attitude->pitch * 0.5);
+  float cr = cos(attitude->roll * 0.5);
+  float sr = sin(attitude->roll * 0.5);
+
+  q->w = cy * cp * cr + sy * sp * sr;
+  q->x = cy * cp * sr - sy * sp * cr;
+  q->y = sy * cp * sr + cy * sp * cr;
+  q->z = sy * cp * cr - cy * sp * sr;
+  return;
+}
+
+// A function to create a floatyKalmanCoreData_t from floaty_state_t
+void getCoreDataFromState(floatyKalmanCoreData_t* thi_s, floaty_state_t *state)
+{
+  thi_s->S[FKC_STATE_X] = state->position.x;
+  thi_s->S[FKC_STATE_Y] = state->position.y;
+  thi_s->S[FKC_STATE_Z] = state->position.z;
+
+  thi_s->S[FKC_STATE_PX] = state->velocity.x;
+  thi_s->S[FKC_STATE_PY] = state->velocity.y;
+  thi_s->S[FKC_STATE_PZ] = state->velocity.z;
+
+  quaternion_t q;
+
+  eulerToQUat(&state->attitude, &q);
+
+  thi_s->S[FKC_STATE_QW] = q.w;
+  thi_s->S[FKC_STATE_QX] = q.x;
+  thi_s->S[FKC_STATE_QY] = q.y;
+  thi_s->S[FKC_STATE_QZ] = q.z;
+
+  thi_s->S[FKC_STATE_ARX] = state->attitudeRate.roll;
+  thi_s->S[FKC_STATE_ARY] = state->attitudeRate.pitch;
+  thi_s->S[FKC_STATE_ARZ] = state->attitudeRate.yaw;
+
+  thi_s->S[FKC_STATE_F1] = state->flaps.flap_1;
+  thi_s->S[FKC_STATE_F2] = state->flaps.flap_2;
+  thi_s->S[FKC_STATE_F3] = state->flaps.flap_3;
+  thi_s->S[FKC_STATE_F4] = state->flaps.flap_4;
+
+  updateRotationMatrices(thi_s);
+
+}
+
+// A function to compensate for the delay in the information in the Optitrack information
+void floatyControlDelayCompensation(floatyKalmanCoreData_t* thi_s, floaty_control_t* input, float dt)
+{
+  float h[FKC_STATE_DIM];
+  arm_matrix_instance_f32 H = {1, FKC_STATE_DIM, h};
+
+  Axis3f aerodynamicForce;
+  Axis3f aerodynamicTorque;
+
+  floatyAerodynamicsParams_t calculationParameters;
+
+  float stateDerivative[FKC_STATE_DIM];
+
+  floatyKalmanCalculateAerodynamicForceAndTorque(thi_s->S, thi_s->R, thi_s->R_F_B, &aerodynamicForce, &aerodynamicTorque, &calculationParameters, &H);
+
+  floatyKalmanCalculateStateDerivative(thi_s->S, input, &aerodynamicForce, &aerodynamicTorque, stateDerivative);
+
+  for(int i=0; i<FKC_STATE_DIM; i++){
+    float temp = thi_s->S[i] + dt*stateDerivative[i];
+    thi_s->S[i] = temp;
+  }
+}
+
+// The input here is the estimated current flap angles, and not the control command 
 void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* input, float dt, const floatyKalmanCoreParams_t *params)
 {
   
@@ -1396,10 +1469,17 @@ void floatyKalmanCalculateStateDerivative(float state[FKC_STATE_DIM], floaty_con
   stateDerivative[FKC_STATE_QY] =  0.5f*(qw*omega[1] - qx*omega[2]               + qz*omega[0]);
   stateDerivative[FKC_STATE_QZ] =  0.5f*(qw*omega[2] + qx*omega[1] - qy*omega[0]              );
 
+  // This update is used if the input value is the control command // 
   stateDerivative[FKC_STATE_F1] = flapTimeConst*(input->flap_1-state[FKC_STATE_F1]);
   stateDerivative[FKC_STATE_F2] = flapTimeConst*(input->flap_2-state[FKC_STATE_F2]);
   stateDerivative[FKC_STATE_F3] = flapTimeConst*(input->flap_3-state[FKC_STATE_F3]);
   stateDerivative[FKC_STATE_F4] = flapTimeConst*(input->flap_4-state[FKC_STATE_F4]);
+
+  // // This update is used if the input value is the estimation of the flap angles // 
+  // stateDerivative[FKC_STATE_F1] = input->flap_1;
+  // stateDerivative[FKC_STATE_F2] = input->flap_2;
+  // stateDerivative[FKC_STATE_F3] = input->flap_3;
+  // stateDerivative[FKC_STATE_F4] = input->flap_4;
 
   return;
 }
@@ -1434,9 +1514,15 @@ void floatyKalmanCoreExternalizeState(const floatyKalmanCoreData_t* thi_s, float
   };
 
   // convert the new attitude into Euler YPR
-  float roll = atan2f(2*(thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QY]+thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QZ]) , thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QW] + thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QX] - thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QY] - thi_s->S[FKC_STATE_QZ]*thi_s->S[FKC_STATE_QZ]);
+  // // Original calculations
+  // float roll = atan2f(2*(thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QY]+thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QZ]) , thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QW] + thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QX] - thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QY] - thi_s->S[FKC_STATE_QZ]*thi_s->S[FKC_STATE_QZ]);
+  // float pitch = asinf(-2*(thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QZ] - thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QY]));
+  // float yaw = atan2f(2*(thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QZ]+thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QX]) , thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QW] - thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QX] - thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QY] + thi_s->S[FKC_STATE_QZ]*thi_s->S[FKC_STATE_QZ]);
+
+  // Correct angles calculations
+  float yaw = atan2f(2*(thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QY]+thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QZ]) , thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QW] + thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QX] - thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QY] - thi_s->S[FKC_STATE_QZ]*thi_s->S[FKC_STATE_QZ]);
   float pitch = asinf(-2*(thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QZ] - thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QY]));
-  float yaw = atan2f(2*(thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QZ]+thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QX]) , thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QW] - thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QX] - thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QY] + thi_s->S[FKC_STATE_QZ]*thi_s->S[FKC_STATE_QZ]);
+  float roll = atan2f(2*(thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QZ]+thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QX]) , thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QW] - thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QX] - thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QY] + thi_s->S[FKC_STATE_QZ]*thi_s->S[FKC_STATE_QZ]);
 
   // Save attitude, angles
   state->attitude = (attitude_t){
