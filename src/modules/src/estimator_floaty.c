@@ -114,6 +114,7 @@ static SemaphoreHandle_t runTaskSemaphore;
 static SemaphoreHandle_t dataMutex;
 static StaticSemaphore_t dataMutexBuffer;
 
+static Axis3f gyroAverageExt;
 
 /**
  * Tuning parameters
@@ -359,6 +360,9 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
   gyroAverage.y = gyroAccumulator.y * DEG_TO_RAD / gyroAccumulatorCount;
   gyroAverage.z = gyroAccumulator.z * DEG_TO_RAD / gyroAccumulatorCount;
 
+  gyroAverageExt.x = gyroAverage.x;
+  gyroAverageExt.y = gyroAverage.y;
+  gyroAverageExt.z = gyroAverage.z;
   // accelerometer is in Gs but the estimator requires ms^-2
   Axis3f accAverage;
   accAverage.x = accAccumulator.x * GRAVITY_MAGNITUDE / accAccumulatorCount;
@@ -638,6 +642,18 @@ LOG_GROUP_START(kalman)
   * @brief Statistics rate full estimation step
   */
   STATS_CNT_RATE_LOG_ADD(rtFinal, &finalizeCounter)
+  /**
+  * @brief Statistics rate full estimation step
+  */
+  LOG_ADD(LOG_FLOAT, gyroMeasX, &gyroAverageExt.x)
+  /**
+  * @brief Statistics rate full estimation step
+  */
+  LOG_ADD(LOG_FLOAT, gyroMeasY, &gyroAverageExt.y)
+  /**
+  * @brief Statistics rate full estimation step
+  */
+  LOG_ADD(LOG_FLOAT, gyroMeasZ, &gyroAverageExt.z)
 LOG_GROUP_STOP(kalman)
 
 
@@ -647,6 +663,7 @@ PARAM_GROUP_START(FloatyKalm)
  * @brief Set to nonzero to reset the Kalman filter values
  */
   PARAM_ADD_CORE(PARAM_UINT8, resetKalman, &resetKalman)
+
 
 PARAM_GROUP_STOP(FloatyKalm)
 

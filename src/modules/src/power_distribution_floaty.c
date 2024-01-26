@@ -48,10 +48,10 @@
 // static int16_t motShift4 = 4200;
 
 
-static int16_t motShift1 = -13000;
+static int16_t motShift1 = -13800;
 static int16_t motShift2 = -4800;
 static int16_t motShift3 = -8000;
-static int16_t motShift4 = 4500;
+static int16_t motShift4 = 5500;
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 

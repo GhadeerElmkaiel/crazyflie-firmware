@@ -101,7 +101,9 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     // floatyControlDelayCompensation(coreData, input_b_last, dt);
     // floatyControlDelayCompensation(coreData, input_last, dt);
 
-    // Update error
+
+    // // ------------ NO DELAY COMPENSTAION ------------
+    // Update error NO DELAY COMPENSTAION
     error_m[F_ERR_X] = setpoint->position.x - state->position.x;
     error_m[F_ERR_Y] = setpoint->position.y - state->position.y;
     error_m[F_ERR_Z] = setpoint->position.z - state->position.z;
@@ -123,6 +125,38 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     error_m[F_ERR_F3] = setpoint->flaps.flap_3 - state->flaps.flap_3;
     error_m[F_ERR_F4] = setpoint->flaps.flap_4 - state->flaps.flap_4;
 
+    float yaw = state->attitude.yaw;
+
+
+    // // ------------ DELAY COMPENSTAION ------------
+    // // Update error WITH DELAY COMPENSTAION
+    // error_m[F_ERR_X] = setpoint->position.x - coreData->S[FKC_STATE_X];
+    // error_m[F_ERR_Y] = setpoint->position.y - coreData->S[FKC_STATE_Y];
+    // error_m[F_ERR_Z] = setpoint->position.z - coreData->S[FKC_STATE_Z];
+
+    // error_m[F_ERR_PX] = setpoint->velocity.x - coreData->S[FKC_STATE_PX];
+    // error_m[F_ERR_PY] = setpoint->velocity.y - coreData->S[FKC_STATE_PY];
+    // error_m[F_ERR_PZ] = setpoint->velocity.z - coreData->S[FKC_STATE_PZ];
+
+    // // angles calculations
+    // float yaw = atan2f(2*(coreData->S[FKC_STATE_QX]*coreData->S[FKC_STATE_QY]+coreData->S[FKC_STATE_QW]*coreData->S[FKC_STATE_QZ]) , coreData->S[FKC_STATE_QW]*coreData->S[FKC_STATE_QW] + coreData->S[FKC_STATE_QX]*coreData->S[FKC_STATE_QX] - coreData->S[FKC_STATE_QY]*coreData->S[FKC_STATE_QY] - coreData->S[FKC_STATE_QZ]*coreData->S[FKC_STATE_QZ]);
+    // float pitch = asinf(-2*(coreData->S[FKC_STATE_QX]*coreData->S[FKC_STATE_QZ] - coreData->S[FKC_STATE_QW]*coreData->S[FKC_STATE_QY]));
+    // float roll = atan2f(2*(coreData->S[FKC_STATE_QY]*coreData->S[FKC_STATE_QZ]+coreData->S[FKC_STATE_QW]*coreData->S[FKC_STATE_QX]) , coreData->S[FKC_STATE_QW]*coreData->S[FKC_STATE_QW] - coreData->S[FKC_STATE_QX]*coreData->S[FKC_STATE_QX] - coreData->S[FKC_STATE_QY]*coreData->S[FKC_STATE_QY] + coreData->S[FKC_STATE_QZ]*coreData->S[FKC_STATE_QZ]);
+
+
+    // error_m[F_ERR_ROLL] = setpoint->attitude.roll - roll;
+    // error_m[F_ERR_PITCH] = setpoint->attitude.pitch - pitch;
+    // error_m[F_ERR_YAW] = setpoint->attitude.yaw - yaw;
+
+    // error_m[F_ERR_ARX] = setpoint->attitudeRate.roll - coreData->S[FKC_STATE_ARX];
+    // error_m[F_ERR_ARY] = setpoint->attitudeRate.pitch - coreData->S[FKC_STATE_ARY];
+    // error_m[F_ERR_ARZ] = setpoint->attitudeRate.yaw - coreData->S[FKC_STATE_ARZ];
+
+    // error_m[F_ERR_F1] = setpoint->flaps.flap_1 - coreData->S[FKC_STATE_F1];
+    // error_m[F_ERR_F2] = setpoint->flaps.flap_2 - coreData->S[FKC_STATE_F2];
+    // error_m[F_ERR_F3] = setpoint->flaps.flap_3 - coreData->S[FKC_STATE_F3];
+    // error_m[F_ERR_F4] = setpoint->flaps.flap_4 - coreData->S[FKC_STATE_F4];
+
 
     // -----------------------------
     // Fix spatial error orientation
@@ -135,7 +169,6 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     NO_DMA_CCM_SAFE_ZERO_INIT static float yaw_rot_trans[3][3];
     static __attribute__((aligned(4))) arm_matrix_instance_f32 yaw_rot_trans_m = { 3, 3, (float *)yaw_rot_trans};
 
-    float yaw = state->attitude.yaw;
     yaw_rot_trans[0][0]= arm_cos_f32(yaw);
     yaw_rot_trans[0][1]= arm_sin_f32(yaw);
     yaw_rot_trans[0][2]= 0;
@@ -173,10 +206,6 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
     mat_mult(&Km, &tmpNN2m, &tmpNN1m);
 
-    // control->flap_1 = 0;
-    // control->flap_2 = 0;
-    // control->flap_3 = 0;
-    // control->flap_4 = 0;
 
     // Add the hovering angles to the control results
     control->flap_1 = control_m[0] + setpoint->flaps.flap_1;
@@ -197,6 +226,12 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       control->flap_4 = FLAP_4_HOVER_ANGLE;
     }
     if(manual==3){
+      control->flap_1 = 0.0;
+      control->flap_2 = 0.0;
+      control->flap_3 = 0.0;
+      control->flap_4 = 0.0;
+    }
+    if(manual==4){
 
       control->flap_1 = sin_table[table_iter];
       table_iter = (table_iter+20)%table_size;
@@ -205,12 +240,33 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       control->flap_3 = 0.0;
       control->flap_4 = 0.0;
     }
+    if(manual==5){
+      control->flap_1 = 0.3146;
+      control->flap_2 = -0.3146;
+      control->flap_3 = 0.3146;
+      control->flap_4 = -0.3146;
+    }
+    if(manual==6){
+      control->flap_1 = 0.3146;
+      control->flap_2 = -0.3646;
+      control->flap_3 = 0.3146;
+      control->flap_4 = -0.3646;
+    }
+    if(manual==7){
+      control->flap_1 = 0.4146;
+      control->flap_2 = -0.3146;
+      control->flap_3 = 0.4146;
+      control->flap_4 = -0.3146;
+    }
 
+    if(manual>9){
+      float flap_angle = (manual-10)*0.05;
+      control->flap_1 = flap_angle;
+      control->flap_2 = -1*flap_angle;
+      control->flap_3 = flap_angle;
+      control->flap_4 = -1*flap_angle;
+    }
 
-    // ctrl_output_log[0] = control->flap_1;
-    // ctrl_output_log[1] = control->flap_2;
-    // ctrl_output_log[2] = control->flap_3;
-    // ctrl_output_log[3] = control->flap_4;
 
     ctrl_output_log[0] = control_m[0];
     ctrl_output_log[1] = control_m[1];
@@ -255,10 +311,6 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
     measurement_t measurement;
     measurement.type = FloatyInputAnglesUpdate;
-    // measurement.data.flapsAngles.flap_1 = (control->flap_1- state->flaps.flap_1)*flapTimeConst*control_dt + state->flaps.flap_1;
-    // measurement.data.flapsAngles.flap_2 = (control->flap_2- state->flaps.flap_2)*flapTimeConst*control_dt + state->flaps.flap_2;
-    // measurement.data.flapsAngles.flap_3 = (control->flap_3- state->flaps.flap_3)*flapTimeConst*control_dt + state->flaps.flap_3;
-    // measurement.data.flapsAngles.flap_4 = (control->flap_4- state->flaps.flap_4)*flapTimeConst*control_dt + state->flaps.flap_4;
 
     measurement.data.flapsAngles.flap_1 = control->flap_1;
     measurement.data.flapsAngles.flap_2 = control->flap_2;
@@ -280,9 +332,7 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     input_last->flap_2 = control->flap_2;
     input_last->flap_3 = control->flap_3;
     input_last->flap_4 = control->flap_4;
-    // r_roll = state->attitude.roll;
-    // r_pitch = state->attitude.pitch;
-    // r_yaw = state->attitude.yaw;
+
   }
   
 

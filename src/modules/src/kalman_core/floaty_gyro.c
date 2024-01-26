@@ -25,11 +25,12 @@
 
 #include "floaty_gyro.h"
 #include "math3d.h"
+#include "floaty_kalman_core.h"
 
 // #include "FreeRTOS.h"
 // #include "task.h"
 
-float stdGyro = 0.1*_PI/180*2;
+// float stdGyro = 0.1*_PI/180*2;
 
 
 void floatyKalmanCoreUpdateWithGyro(floatyKalmanCoreData_t* thi_s, Axis3f *gyro)
@@ -52,17 +53,17 @@ void floatyKalmanCoreUpdateWithGyro(floatyKalmanCoreData_t* thi_s, Axis3f *gyro)
 
 
   h[FKC_STATE_ARX] = 1;
-  floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->x - thi_s->S[FKC_STATE_ARX], stdGyro, FKC_STATE_ARX);
+  floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->x - thi_s->S[FKC_STATE_ARX], measurementGyroNoiseStd, FKC_STATE_ARX);
   h[FKC_STATE_ARX] = 0;
 
 
   h[FKC_STATE_ARY] = 1;
-  floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->y - thi_s->S[FKC_STATE_ARY], stdGyro, FKC_STATE_ARY);
+  floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->y - thi_s->S[FKC_STATE_ARY], measurementGyroNoiseStd, FKC_STATE_ARY);
   h[FKC_STATE_ARY] = 0;
 
 
   h[FKC_STATE_ARZ] = 1;
-  floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->z - thi_s->S[FKC_STATE_ARZ], stdGyro, FKC_STATE_ARZ);
+  floatyKalmanCoreScalarUpdate(thi_s, &H, gyro->z - thi_s->S[FKC_STATE_ARZ], measurementGyroNoiseStd, FKC_STATE_ARZ);
   h[FKC_STATE_ARZ] = 0;
 
 }

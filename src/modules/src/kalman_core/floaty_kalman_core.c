@@ -170,12 +170,14 @@ void floatyKalmanCoreDefaultParams(floatyKalmanCoreParams_t* params)
   params->procNoiseAcc_z = 1.0f;
   params->procNoiseVel = 0.5;
   params->procNoisePos = 0.05;
-  params->procNoiseAtt = 0.05;
-  params->measNoiseBaro = 2.0f;           // meters
-  params->measNoiseGyro_rollpitch = 0.1f; // radians per second
-  params->measNoiseGyro_yaw = 0.1f;       // radians per second
+  params->procNoiseAtt = 0.025;
+  params->procNoiseAngVel = 0.05;
+  // params->measNoiseBaro = 2.0f;           // meters
+  // params->measNoiseGyro_rollpitch = 0.1f; // radians per second
+  // params->measNoiseGyro_yaw = 0.1f;       // radians per second
   params->measNoisePos = 0.005;           // meters
   params->measNoiseAtt = 0.01;            // radians
+  params->measNoiseGyro = 0.05;            // radians
 
   params->initialX = 0.0;
   params->initialY = 0.0;

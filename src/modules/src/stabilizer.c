@@ -345,7 +345,7 @@ static void stabilizerTask(void* param)
       if (!rateSupervisorValidate(&rateSupervisorContext, xTaskGetTickCount())) {
         if (!rateWarningDisplayed) {
           DEBUG_PRINT("WARNING: stabilizer loop rate is off (%lu)\n", rateSupervisorLatestCount(&rateSupervisorContext));
-          rateWarningDisplayed = true;
+          // rateWarningDisplayed = true;
         }
       }
     }
