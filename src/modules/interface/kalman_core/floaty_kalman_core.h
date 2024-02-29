@@ -64,6 +64,8 @@
 #define measurementQuatNoiseStd 0.007
 #define measurementGyroNoiseStd 0.06   // 0.1*_PI/180*2;
 
+#define linearized_state_estimation_matrix true
+
 typedef enum
 {
   FKC_STATE_X, FKC_STATE_Y, FKC_STATE_Z, FKC_STATE_PX, FKC_STATE_PY, FKC_STATE_PZ, FKC_STATE_Q0, FKC_STATE_Q1, FKC_STATE_Q2, FKC_STATE_Q3, FKC_STATE_ARX, FKC_STATE_ARY, FKC_STATE_ARZ, FKC_STATE_F1, FKC_STATE_F2, FKC_STATE_F3, FKC_STATE_F4, FKC_STATE_DIM
@@ -179,6 +181,9 @@ void eulerToQUat(attitude_t* attitude, quaternion_t* q);
 
 // A function that returns a CoreData from a state
 void getCoreDataFromState(floatyKalmanCoreData_t* thi_s, floaty_state_t *state);
+
+// A function for performing the delay compensation
+void floatyControlDelayCompensation(floatyKalmanCoreData_t* thi_s, floaty_control_t* input, float dt);
 
 /*
  * A function to calculate the aerodynamic force and torque vectors

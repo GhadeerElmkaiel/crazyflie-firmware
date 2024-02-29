@@ -29,3 +29,5 @@
 
 // Direct measurements of Crazyflie pose
 void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasurement_t *pose);
+
+void calcQuatDerivatives(quaternion_t quat, float omega[3], quaternion_t* quat_deriv);

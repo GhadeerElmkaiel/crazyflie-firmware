@@ -356,13 +356,19 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
 
   // gyro is in deg/sec but the estimator requires rad/sec
   Axis3f gyroAverage;
+  Axis3f gyroAverageRotated;
+  
   gyroAverage.x = gyroAccumulator.x * DEG_TO_RAD / gyroAccumulatorCount;
   gyroAverage.y = gyroAccumulator.y * DEG_TO_RAD / gyroAccumulatorCount;
   gyroAverage.z = gyroAccumulator.z * DEG_TO_RAD / gyroAccumulatorCount;
 
-  gyroAverageExt.x = gyroAverage.x;
-  gyroAverageExt.y = gyroAverage.y;
-  gyroAverageExt.z = gyroAverage.z;
+  gyroAverageRotated.x = 0.7071*(gyroAverage.x+gyroAverage.y);
+  gyroAverageRotated.y = 0.7071*(gyroAverage.y-gyroAverage.x);
+  gyroAverageRotated.z = gyroAverage.z;
+
+  gyroAverageExt.x = gyroAverageRotated.x;
+  gyroAverageExt.y = gyroAverageRotated.y;
+  gyroAverageExt.z = gyroAverageRotated.z;
   // accelerometer is in Gs but the estimator requires ms^-2
   Axis3f accAverage;
   accAverage.x = accAccumulator.x * GRAVITY_MAGNITUDE / accAccumulatorCount;
@@ -386,7 +392,7 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
 
   floatyKalmanCorePredict(&floatyCoreData, &input, dt, &coreParams);
 
-  floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroAverage);
+  floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroAverageRotated);
   return true;
 }
 

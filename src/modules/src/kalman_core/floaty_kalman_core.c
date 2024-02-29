@@ -72,6 +72,7 @@
 #endif
 
 #include "floaty_params.h"
+#include "State_Est_A_matrix.h"
 
 // #include "lighthouse_calibration.h"
 // #define DEBUG_STATE_CHECK
@@ -85,7 +86,7 @@
 
 static uint8_t useOptCalcs = 0;
 
-float flapHoverAng = 0.6146;
+float flapHoverAng = 0.436;
 
 float rhoCd_2 = 0.735;
 float dCpValue = 0.065;
@@ -198,6 +199,16 @@ void floatyKalmanCoreDefaultParams(floatyKalmanCoreParams_t* params)
   params->initialQX = 0.0;
   params->initialQY = 0.0;
   params->initialQZ = 0.0;
+
+  // In the case of linearization, the process noise should be higher
+  if(linearized_state_estimation_matrix){
+    params->procNoiseAcc_xy = params->procNoiseAcc_xy *10;
+    params->procNoiseAcc_z = params->procNoiseAcc_z *10;
+    params->procNoiseVel = params->procNoiseVel *10;
+    params->procNoisePos = params->procNoisePos *10;
+    params->procNoiseAtt = params->procNoiseAtt *10;
+    params->procNoiseAngVel = params->procNoiseAngVel *10;
+  }
 
 }
 
@@ -672,9 +683,19 @@ void floatyControlDelayCompensation(floatyKalmanCoreData_t* thi_s, floaty_contro
 
   float stateDerivative[FKC_STATE_DIM];
 
-  floatyKalmanCalculateAerodynamicForceAndTorque(thi_s->S, thi_s->R, thi_s->R_F_B, &aerodynamicForce, &aerodynamicTorque, &calculationParameters, &H);
-
-  floatyKalmanCalculateStateDerivative(thi_s->S, input, &aerodynamicForce, &aerodynamicTorque, stateDerivative);
+  if(linearized_state_estimation_matrix){
+    for(int i=0; i<FKC_STATE_DIM; i++){
+      float sum = 0;
+      for(int j=0; j<FKC_STATE_DIM; j++){
+        sum+=State_Est_A_matrix[i][j]*thi_s->S[j];
+      }
+      stateDerivative[i] = sum;
+    }
+  }
+  else{
+    floatyKalmanCalculateAerodynamicForceAndTorque(thi_s->S, thi_s->R, thi_s->R_F_B, &aerodynamicForce, &aerodynamicTorque, &calculationParameters, &H);
+    floatyKalmanCalculateStateDerivative(thi_s->S, input, &aerodynamicForce, &aerodynamicTorque, stateDerivative);
+  }
 
   for(int i=0; i<FKC_STATE_DIM; i++){
     float temp = thi_s->S[i] + dt*stateDerivative[i];
@@ -713,82 +734,94 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   float delta = 0.0001;
 
 
-  // ========= DYNAMICS LINEARIZATION FOR UNCERTAINTY =========
-  /*
-   * The A matrix has the following structure
-   * [x  y  z  x. y. z. roll . ]
-   * ---------------------------
-   * [0  0  0  1  0  0  0  ... ]
-   * [0  0  0  0  1  0  0  ... ]
-   * [0  0  0  0  0  1  0  ... ]
-   * [.  .  .  .  .  .  .  ... ]
-   * 
-  */
-  A[FKC_STATE_X][FKC_STATE_PX] = 1;
-  A[FKC_STATE_Y][FKC_STATE_PY] = 1;
-  A[FKC_STATE_Z][FKC_STATE_PZ] = 1;
-
-  // floatyKalmanAerodynamicsParamsCalculation(thi_s, &calculationParameters);
-
-  floatyKalmanCalculateAerodynamicForceAndTorque(thi_s->S, thi_s->R, thi_s->R_F_B, &aerodynamicForce, &aerodynamicTorque, &calculationParameters, &H);
-
-  floatyKalmanCalculateStateDerivative(thi_s->S, input, &aerodynamicForce, &aerodynamicTorque, stateDerivative);
-
-  /*
-  TODO Check
-  Here the rest of the calculation for the A matrix is done before updating the state 
-  */
-
-  // Calculate the A matrix using finite differences
-  // The following three lines would be more accurate but it would be waste of recourses so it was
-  // changed to use i=3 considering that the first 3 states are the x,y,z states
-  // for(int i=0; i<FKC_STATE_DIM; i++){
-  //   if(i==FKC_STATE_X || i==FKC_STATE_Y || i==FKC_STATE_Z)
-  //     continue;
-
-  for(int i=3; i<FKC_STATE_DIM; i++){
-    // Fix the previous value and return it to the correct value if it was changed
-    stateDelta[i-1] = thi_s->S[i-1];
-    stateDelta[i] = thi_s->S[i]+delta;
-
-    // The following section is to calculate the aerodynamic force and torque vectors
-    // In the case if the attitude was changed
-    if(i==FKC_STATE_Q0 || i==FKC_STATE_Q1 || i==FKC_STATE_Q2 || i==FKC_STATE_Q3){
-      float R[3][3];
-      quaternion_t q;
-      q.q0=stateDelta[FKC_STATE_Q0];
-      q.q1=stateDelta[FKC_STATE_Q1];
-      q.q2=stateDelta[FKC_STATE_Q2];
-      q.q3=stateDelta[FKC_STATE_Q3];
-
-      // Calculate the new rotation matrix using the changed quaternion
-      updateBodyRotationMatrixWithQuatValues(R, &q);
-      floatyKalmanCalculateAerodynamicForceAndTorque(stateDelta, R, thi_s->R_F_B, &aerodynamicForceDelta, &aerodynamicTorqueDelta, &calculationParameters, &H);
+  
+  if(linearized_state_estimation_matrix){
+    for(int i=0; i<FKC_STATE_DIM; i++){
+      float sum = 0;
+      for(int j=0; j<FKC_STATE_DIM; j++){
+        sum+=State_Est_A_matrix[i][j]*thi_s->S[j];
+      }
+      stateDerivative[i] = sum;
     }
-    else{
-      // In the case if one of the flap angles was changed
-      if(i==FKC_STATE_F1 || i==FKC_STATE_F2 || i==FKC_STATE_F3 || i==FKC_STATE_F4){
-        float R_F_B[4][3][3];
+  }
+  else{
+    // ========= DYNAMICS LINEARIZATION FOR UNCERTAINTY =========
+    /*
+    * The A matrix has the following structure
+    * [x  y  z  x. y. z. roll . ]
+    * ---------------------------
+    * [0  0  0  1  0  0  0  ... ]
+    * [0  0  0  0  1  0  0  ... ]
+    * [0  0  0  0  0  1  0  ... ]
+    * [.  .  .  .  .  .  .  ... ]
+    * 
+    */
+    A[FKC_STATE_X][FKC_STATE_PX] = 1;
+    A[FKC_STATE_Y][FKC_STATE_PY] = 1;
+    A[FKC_STATE_Z][FKC_STATE_PZ] = 1;
 
-        for(int j=0; j<4; j++){
-          // Calculate the new flap to body rotation matrix using the changed flap angles
-          updateFlapRotationMatrixWithPhyValues(R_F_B[j], stateDelta[FKC_STATE_F1+j], j);
-        }
-        floatyKalmanCalculateAerodynamicForceAndTorque(stateDelta, thi_s->R, R_F_B, &aerodynamicForceDelta, &aerodynamicTorqueDelta, &calculationParameters, &H);
+    // floatyKalmanAerodynamicsParamsCalculation(thi_s, &calculationParameters);
+
+    floatyKalmanCalculateAerodynamicForceAndTorque(thi_s->S, thi_s->R, thi_s->R_F_B, &aerodynamicForce, &aerodynamicTorque, &calculationParameters, &H);
+
+    floatyKalmanCalculateStateDerivative(thi_s->S, input, &aerodynamicForce, &aerodynamicTorque, stateDerivative);
+
+    /*
+    TODO Check
+    Here the rest of the calculation for the A matrix is done before updating the state 
+    */
+
+    // Calculate the A matrix using finite differences
+    // The following three lines would be more accurate but it would be waste of recourses so it was
+    // changed to use i=3 considering that the first 3 states are the x,y,z states
+    // for(int i=0; i<FKC_STATE_DIM; i++){
+    //   if(i==FKC_STATE_X || i==FKC_STATE_Y || i==FKC_STATE_Z)
+    //     continue;
+
+    for(int i=3; i<FKC_STATE_DIM; i++){
+      // Fix the previous value and return it to the correct value if it was changed
+      stateDelta[i-1] = thi_s->S[i-1];
+      stateDelta[i] = thi_s->S[i]+delta;
+
+      // The following section is to calculate the aerodynamic force and torque vectors
+      // In the case if the attitude was changed
+      if(i==FKC_STATE_Q0 || i==FKC_STATE_Q1 || i==FKC_STATE_Q2 || i==FKC_STATE_Q3){
+        float R[3][3];
+        quaternion_t q;
+        q.q0=stateDelta[FKC_STATE_Q0];
+        q.q1=stateDelta[FKC_STATE_Q1];
+        q.q2=stateDelta[FKC_STATE_Q2];
+        q.q3=stateDelta[FKC_STATE_Q3];
+
+        // Calculate the new rotation matrix using the changed quaternion
+        updateBodyRotationMatrixWithQuatValues(R, &q);
+        floatyKalmanCalculateAerodynamicForceAndTorque(stateDelta, R, thi_s->R_F_B, &aerodynamicForceDelta, &aerodynamicTorqueDelta, &calculationParameters, &H);
       }
       else{
-        // In the case if no angle was changed
-        floatyKalmanCalculateAerodynamicForceAndTorque(stateDelta, thi_s->R, thi_s->R_F_B, &aerodynamicForceDelta, &aerodynamicTorqueDelta, &calculationParameters, &H);
+        // In the case if one of the flap angles was changed
+        if(i==FKC_STATE_F1 || i==FKC_STATE_F2 || i==FKC_STATE_F3 || i==FKC_STATE_F4){
+          float R_F_B[4][3][3];
+
+          for(int j=0; j<4; j++){
+            // Calculate the new flap to body rotation matrix using the changed flap angles
+            updateFlapRotationMatrixWithPhyValues(R_F_B[j], stateDelta[FKC_STATE_F1+j], j);
+          }
+          floatyKalmanCalculateAerodynamicForceAndTorque(stateDelta, thi_s->R, R_F_B, &aerodynamicForceDelta, &aerodynamicTorqueDelta, &calculationParameters, &H);
+        }
+        else{
+          // In the case if no angle was changed
+          floatyKalmanCalculateAerodynamicForceAndTorque(stateDelta, thi_s->R, thi_s->R_F_B, &aerodynamicForceDelta, &aerodynamicTorqueDelta, &calculationParameters, &H);
+        }
       }
-    }
 
-    // The following section is to calculate the state derivative using the calculated vectors
-    floatyKalmanCalculateStateDerivative(stateDelta, input, &aerodynamicForceDelta, &aerodynamicTorqueDelta, stateDerivativeDelta);
+      // The following section is to calculate the state derivative using the calculated vectors
+      floatyKalmanCalculateStateDerivative(stateDelta, input, &aerodynamicForceDelta, &aerodynamicTorqueDelta, stateDerivativeDelta);
 
-    float err;
-    for(int j=3; j<FKC_STATE_DIM; j++){
-      err = stateDerivativeDelta[j]-stateDerivative[j];
-      A[j][i] = err/delta;
+      float err;
+      for(int j=3; j<FKC_STATE_DIM; j++){
+        err = stateDerivativeDelta[j]-stateDerivative[j];
+        A[j][i] = err/delta;
+      }
     }
   }
 
@@ -881,8 +914,10 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
       thi_s->P[i][i] = p;
   }
 
+  // Updateing the small block of the uncertainty matrix
   for(int i=3; i<FKC_STATE_F1; i++){
     // Maybe here I can remove half the evluations by usign the fact that P is symmetrical
+    // The comment above is already done
     for(int j=i; j<FKC_STATE_F1; j++){
       p = thi_s->P[i][j]+dt*(tmpNN1d[i][j] + tmpNN1d[j][i]); // Updating using the first part of P* = AP + PA' + Q
       thi_s->P[i][j] = thi_s->P[j][i] = p;

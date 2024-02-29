@@ -492,22 +492,22 @@ PARAM_GROUP_START(extCtrl)
 /**
  * @brief The controller output for M1 (in Radian)
  */
-  // PARAM_ADD_CORE(LOG_FLOAT, m1, &ext_ctrl[0])
-  PARAM_ADD_CORE(LOG_FLOAT, m1, &ext_ctrl_m1)
+  // PARAM_ADD_CORE(PARAM_FLOAT, m1, &ext_ctrl[0])
+  PARAM_ADD_CORE(PARAM_FLOAT, m1, &ext_ctrl_m1)
 /**
  * @brief The controller output for M2 (in Radian)
  */
-  // PARAM_ADD_CORE(LOG_FLOAT, m2, &ext_ctrl[1])
-  PARAM_ADD_CORE(LOG_FLOAT, m2, &ext_ctrl_m2)
+  // PARAM_ADD_CORE(PARAM_FLOAT, m2, &ext_ctrl[1])
+  PARAM_ADD_CORE(PARAM_FLOAT, m2, &ext_ctrl_m2)
 /**
  * @brief The controller output for M3 (in Radian)
  */
-  // PARAM_ADD_CORE(LOG_FLOAT, m3, &ext_ctrl[2])
-  PARAM_ADD_CORE(LOG_FLOAT, m3, &ext_ctrl_m3)
+  // PARAM_ADD_CORE(PARAM_FLOAT, m3, &ext_ctrl[2])
+  PARAM_ADD_CORE(PARAM_FLOAT, m3, &ext_ctrl_m3)
 /**
  * @brief The controller output for M4 (in Radian)
  */
-  // PARAM_ADD_CORE(LOG_FLOAT, m4, &ext_ctrl[3])
-  PARAM_ADD_CORE(LOG_FLOAT, m4, &ext_ctrl_m4)
+  // PARAM_ADD_CORE(PARAM_FLOAT, m4, &ext_ctrl[3])
+  PARAM_ADD_CORE(PARAM_FLOAT, m4, &ext_ctrl_m4)
 
 PARAM_GROUP_STOP(extCtrl)
