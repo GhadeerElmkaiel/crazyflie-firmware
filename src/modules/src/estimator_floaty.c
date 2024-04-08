@@ -59,6 +59,7 @@
 // #include "kalman_core.h"
 #include "floaty_kalman_core.h"
 #include "kalman_supervisor.h"
+#include "floaty_gyro_filter.h"
 
 #include "FreeRTOS.h"
 #include "queue.h"
@@ -115,6 +116,7 @@ static SemaphoreHandle_t dataMutex;
 static StaticSemaphore_t dataMutexBuffer;
 
 static Axis3f gyroAverageExt;
+static Axis3f gyroFilteredExt;
 
 /**
  * Tuning parameters
@@ -153,6 +155,9 @@ static uint8_t resetKalman = 1;
 
 static Axis3f accAccumulator;
 static Axis3f gyroAccumulator;
+static Axis3f gyroAvgVector[filterArrLen];
+static Axis3f gyroFilteredVector[filterArrLen];
+static uint32_t gyroFilterPointer = 0;
 static uint32_t accAccumulatorCount;
 static uint32_t gyroAccumulatorCount;
 static floaty_control_t flapsAngles;
@@ -163,7 +168,7 @@ static bool quadIsFlying = false;
 // static OutlierFilterLhState_t sweepOutlierFilterState;
 
 // Indicates that the internal state is corrupt and should be reset
-bool resetFLoatyEstimation = false;
+// bool resetFLoatyEstimation = false;
 
 static floatyKalmanCoreParams_t coreParams;
 
@@ -357,6 +362,7 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
   // gyro is in deg/sec but the estimator requires rad/sec
   Axis3f gyroAverage;
   Axis3f gyroAverageRotated;
+  Axis3f gyroFiltered;
   
   gyroAverage.x = gyroAccumulator.x * DEG_TO_RAD / gyroAccumulatorCount;
   gyroAverage.y = gyroAccumulator.y * DEG_TO_RAD / gyroAccumulatorCount;
@@ -374,6 +380,40 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
   accAverage.x = accAccumulator.x * GRAVITY_MAGNITUDE / accAccumulatorCount;
   accAverage.y = accAccumulator.y * GRAVITY_MAGNITUDE / accAccumulatorCount;
   accAverage.z = accAccumulator.z * GRAVITY_MAGNITUDE / accAccumulatorCount;
+
+  // -------------------------------
+  // Filtering with IIR filter
+  // Gyro[n]
+  gyroAvgVector[gyroFilterPointer].x = gyroAverageRotated.x;
+  gyroAvgVector[gyroFilterPointer].y = gyroAverageRotated.y;
+  gyroAvgVector[gyroFilterPointer].z = gyroAverageRotated.z;
+
+  // GyroFiltered[n] = a0*G[n] + a1*G[n-1] + a2*G[n-2] + b1*Gf[n-1] + b2*Gf[n-2]
+  gyroFiltered.x = filter_num_consts[0]*gyroAvgVector[gyroFilterPointer].x;
+  gyroFiltered.y = filter_num_consts[0]*gyroAvgVector[gyroFilterPointer].y;
+  gyroFiltered.z = filter_num_consts[0]*gyroAvgVector[gyroFilterPointer].z;
+  for(int iter=0; iter<filter_order; iter++){
+    // Add the previous average gyro measurements
+    gyroFiltered.x = gyroFiltered.x + filter_num_consts[iter+1]*gyroAvgVector[(gyroFilterPointer+filter_order-iter)%(filter_order+1)].x;
+    gyroFiltered.y = gyroFiltered.y + filter_num_consts[iter+1]*gyroAvgVector[(gyroFilterPointer+filter_order-iter)%(filter_order+1)].y;
+    gyroFiltered.z = gyroFiltered.z + filter_num_consts[iter+1]*gyroAvgVector[(gyroFilterPointer+filter_order-iter)%(filter_order+1)].z;
+
+    // Add the previous filter values
+    gyroFiltered.x = gyroFiltered.x + filter_den_consts[iter]*gyroFilteredVector[(gyroFilterPointer+filter_order-iter)%(filter_order+1)].x;
+    gyroFiltered.y = gyroFiltered.y + filter_den_consts[iter]*gyroFilteredVector[(gyroFilterPointer+filter_order-iter)%(filter_order+1)].y;
+    gyroFiltered.z = gyroFiltered.z + filter_den_consts[iter]*gyroFilteredVector[(gyroFilterPointer+filter_order-iter)%(filter_order+1)].z;
+
+  }
+
+  gyroFilteredExt.x = gyroFiltered.x;
+  gyroFilteredExt.y = gyroFiltered.y;
+  gyroFilteredExt.z = gyroFiltered.z;
+
+  gyroFilteredVector[gyroFilterPointer].x = gyroFiltered.x;
+  gyroFilteredVector[gyroFilterPointer].y = gyroFiltered.y;
+  gyroFilteredVector[gyroFilterPointer].z = gyroFiltered.z;
+
+  gyroFilterPointer = (gyroFilterPointer+1)%(filter_order+1);
 
   // reset for next call
   accAccumulator = (Axis3f){.axis={0}};
@@ -393,6 +433,7 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
   floatyKalmanCorePredict(&floatyCoreData, &input, dt, &coreParams);
 
   floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroAverageRotated);
+  // floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroFiltered);
   return true;
 }
 
@@ -506,6 +547,11 @@ void estimatorFloatyKalmanInit(void)
 
   accAccumulatorCount = 0;
   gyroAccumulatorCount = 0;
+
+  for(int i=0; i<=filter_order; i++){
+    gyroAvgVector[i] = (Axis3f){.axis = {0}};
+    gyroFilteredVector[i] = (Axis3f){.axis = {0}};
+  }
   // outlierFilterReset(&sweepOutlierFilterState, 0);
 
   floatyKalmanCoreInit(&floatyCoreData, &coreParams);
@@ -649,17 +695,31 @@ LOG_GROUP_START(kalman)
   */
   STATS_CNT_RATE_LOG_ADD(rtFinal, &finalizeCounter)
   /**
-  * @brief Statistics rate full estimation step
+  * @brief Averaged gyro x measurement
   */
   LOG_ADD(LOG_FLOAT, gyroMeasX, &gyroAverageExt.x)
   /**
-  * @brief Statistics rate full estimation step
+  * @brief Averaged gyro y measurement
   */
   LOG_ADD(LOG_FLOAT, gyroMeasY, &gyroAverageExt.y)
   /**
-  * @brief Statistics rate full estimation step
+  * @brief Averaged gyro z measurement
   */
   LOG_ADD(LOG_FLOAT, gyroMeasZ, &gyroAverageExt.z)
+
+  /**
+  * @brief Filtered gyro x measurement
+  */
+  LOG_ADD(LOG_FLOAT, gyroFilteredX, &gyroFilteredExt.x)
+  /**
+  * @brief Filtered gyro y measurement
+  */
+  LOG_ADD(LOG_FLOAT, gyroFilteredY, &gyroFilteredExt.y)
+  /**
+  * @brief Filtered gyro z measurement
+  */
+  LOG_ADD(LOG_FLOAT, gyroFilteredZ, &gyroFilteredExt.z)
+  
 LOG_GROUP_STOP(kalman)
 
 

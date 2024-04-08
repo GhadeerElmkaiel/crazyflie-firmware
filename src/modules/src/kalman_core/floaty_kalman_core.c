@@ -169,14 +169,15 @@ void floatyKalmanCoreDefaultParams(floatyKalmanCoreParams_t* params)
 
   params->procNoiseAcc_xy = 0.5f;
   params->procNoiseAcc_z = 1.0f;
-  params->procNoiseVel = 0.5;
+  // params->procNoiseVel = 0.5;
+  params->procNoiseVel = 0.9;
   params->procNoisePos = 0.05;
   params->procNoiseAtt = 0.025;
   params->procNoiseAngVel = 0.05;
   // params->measNoiseBaro = 2.0f;           // meters
   // params->measNoiseGyro_rollpitch = 0.1f; // radians per second
   // params->measNoiseGyro_yaw = 0.1f;       // radians per second
-  params->measNoisePos = 0.005;           // meters
+  params->measNoisePos = 0.002;           // meters
   params->measNoiseAtt = 0.01;            // radians
   params->measNoiseGyro = 0.05;            // radians
 
@@ -202,12 +203,14 @@ void floatyKalmanCoreDefaultParams(floatyKalmanCoreParams_t* params)
 
   // In the case of linearization, the process noise should be higher
   if(linearized_state_estimation_matrix){
-    params->procNoiseAcc_xy = params->procNoiseAcc_xy *10;
-    params->procNoiseAcc_z = params->procNoiseAcc_z *10;
-    params->procNoiseVel = params->procNoiseVel *10;
-    params->procNoisePos = params->procNoisePos *10;
-    params->procNoiseAtt = params->procNoiseAtt *10;
-    params->procNoiseAngVel = params->procNoiseAngVel *10;
+    params->procNoiseAcc_xy = params->procNoiseAcc_xy *2;
+    params->procNoiseAcc_z = params->procNoiseAcc_z *2;
+    // params->procNoiseVel = params->procNoiseVel *2;
+    // params->procNoisePos = params->procNoisePos *2;
+    params->procNoiseVel = params->procNoiseVel *4;
+    params->procNoisePos = params->procNoisePos *2;
+    params->procNoiseAtt = params->procNoiseAtt *2;
+    params->procNoiseAngVel = params->procNoiseAngVel *2;
   }
 
 }
@@ -430,10 +433,43 @@ void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_inst
 
   float R = stdMeasNoise*stdMeasNoise;
   float HPHR = R + thi_s->P[state_idx][state_idx]; // HPH' + R
-  for (int i=0; i<FKC_STATE_DIM; i++) { // Add the element of HPH' to the above
-    K[i] = thi_s->P[state_idx][i]/HPHR; // thi_s obviously only works if the update is scalar (as in thi_s function)
-    thi_s->S[i] = thi_s->S[i] + K[i] * error; // state update    
+
+
+  
+  // --------------------------------------------------------
+  // ----------------------- Original -----------------------
+
+  // for (int i=0; i<FKC_STATE_DIM; i++) { // Add the element of HPH' to the above
+  //   K[i] = thi_s->P[state_idx][i]/HPHR; // thi_s obviously only works if the update is scalar (as in thi_s function)
+  //   thi_s->S[i] = thi_s->S[i] + K[i] * error; // state update    
+  // }
+
+  // -------------------------------------------------------
+  // ----------------------- TESTING -----------------------
+  // Manual remove effect of angle measurements on velocity
+  if(state_idx>=FKC_STATE_ARX){
+
+    for (int i=0; i<FKC_STATE_DIM; i++) { // Add the element of HPH' to the above
+      if(i<FKC_STATE_ARX){
+        K[i]=0;
+      }
+      else{
+        K[i] = thi_s->P[state_idx][i]/HPHR; // thi_s obviously only works if the update is scalar (as in thi_s function)
+      }
+      thi_s->S[i] = thi_s->S[i] + K[i] * error; // state update    
+    }
   }
+  else{
+
+    for (int i=0; i<FKC_STATE_DIM; i++) { // Add the element of HPH' to the above
+      K[i] = thi_s->P[state_idx][i]/HPHR; // thi_s obviously only works if the update is scalar (as in thi_s function)
+      thi_s->S[i] = thi_s->S[i] + K[i] * error; // state update    
+    }
+  }
+  // -------------------------------------------------------
+  // -------------------------------------------------------
+
+
 
 
   // // ====== INNOVATION COVARIANCE ======
@@ -586,8 +622,9 @@ void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_inst
 }
 
 
-void floatyKalmanCoreScalarUpdateDiagP(floatyKalmanCoreData_t* thi_s, int state_idx, float error, float stdMeasNoise)
+void floatyKalmanCoreScalarUpdateDiagP(floatyKalmanCoreData_t* thi_s, int state_idx, float error, float errorForVel, float stdMeasNoise)
 {
+  // I use different errors for velocity as the other error has delay compensation which is affecting the velocity updates
   // state_idx: is the index of the updated value in the state vector (ex. 0 for x, and 13 for F1 "First flap's angle")
   // The Kalman gain as a scalar value as one value is actually updated
   static float K_Scalar;
@@ -607,7 +644,7 @@ void floatyKalmanCoreScalarUpdateDiagP(floatyKalmanCoreData_t* thi_s, int state_
 
   // ====== UPDATE VELOCITY ======
   K_Scalar_i3 = P_i3/HPHR; // kalman gain for velocity value = (PH' (HPH' + R )^-1)
-  thi_s->S[state_idx+3] = thi_s->S[state_idx+3] + K_Scalar_i3 * error; // state update
+  thi_s->S[state_idx+3] = thi_s->S[state_idx+3] + K_Scalar_i3 * errorForVel; // state update
   thi_s->P[state_idx][state_idx+3] = thi_s->P[state_idx+3][state_idx] = P_i3 - 0.5*(K_Scalar*P_i3 + K_Scalar_i3*P_ii);
   thi_s->P[state_idx+3][state_idx+3] = P_33 - 0.5*(K_Scalar*P_i3 + K_Scalar_i3*P_ii);
 
@@ -723,28 +760,147 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
 
   floatyAerodynamicsParams_t calculationParameters;
   
-  // Create a copy of the state to use it while calculation without changing the actuale state
-  float stateDelta[FKC_STATE_DIM];
-  for(int i=0; i<FKC_STATE_DIM; i++){
-    stateDelta[i] = thi_s->S[i];
-  }
-
   float stateDerivative[FKC_STATE_DIM];
-  float stateDerivativeDelta[FKC_STATE_DIM];
-  float delta = 0.0001;
-
+  float RotatedVelstate[FKC_STATE_DIM];
 
   
   if(linearized_state_estimation_matrix){
+    
+    // ========================== Rotate to Inertial Frame ==========================
+    // We calculate the yaw angle to rotate the liniarized dynamics to inertial frame
+    float yaw = atan2f(2*(thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QY]+thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QZ]) , thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QW] + thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QX] - thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QY] - thi_s->S[FKC_STATE_QZ]*thi_s->S[FKC_STATE_QZ]);
+    float cos_y = arm_cos_f32(yaw);
+    float sin_y = arm_sin_f32(yaw);
+    float Dx = State_Est_A_matrix[FKC_STATE_PX][FKC_STATE_PX];
+    float Dy = State_Est_A_matrix[FKC_STATE_PY][FKC_STATE_PY];
+
+    float Gx = State_Est_A_matrix[FKC_STATE_PX][FKC_STATE_QY];
+    float Gy = State_Est_A_matrix[FKC_STATE_PY][FKC_STATE_QX];
+    
+
+    for(int i=0; i<FKC_STATE_DIM; i++){
+      RotatedVelstate[i] = thi_s->S[i];
+    }
+    RotatedVelstate[FKC_STATE_PX] = cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY];
+    RotatedVelstate[FKC_STATE_PY] = sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY];
+    
     for(int i=0; i<FKC_STATE_DIM; i++){
       float sum = 0;
-      for(int j=0; j<FKC_STATE_DIM; j++){
-        sum+=State_Est_A_matrix[i][j]*thi_s->S[j];
+      // ====================================================================
+      // Rotate the A matrix from zero-yaw frame to the Inertial global frame 
+      if(i==FKC_STATE_PX){
+        // for(int j=0; j<FKC_STATE_DIM; j++){
+        //   float State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][j]*cos_y - State_Est_A_matrix[FKC_STATE_PY][j]*sin_y;
+        //   sum+= State_Est_j_element*thi_s->S[j];
+        //   A[FKC_STATE_PX][j] = State_Est_j_element;
+        // }
+
+        // For the velocity, the model calculates the change in a rotated frame (Yaw = 0)
+        // So it is necessary to rotate the results back to the inertial frame. Additionally,
+        // The used velocity components of the state vector are in the body frame so it is 
+        // needed to rotate them first to the body frame then calculate, then rotate back to inertial (if needed) 
+        for(int j=0; j<FKC_STATE_DIM; j++){
+          float State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][j]*cos_y - State_Est_A_matrix[FKC_STATE_PY][j]*sin_y;
+          if(j==FKC_STATE_PX){
+            sum+= State_Est_j_element*(cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY]);
+          }
+          else if(j==FKC_STATE_PY){
+            sum+= State_Est_j_element*(sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
+          }
+          else{
+            sum+= State_Est_j_element*thi_s->S[j];
+          }
+          // sum+= State_Est_j_element*RotatedVelstate[j];
+          A[FKC_STATE_PX][j] = State_Est_j_element;
+        }
+
+        // float DxxN = cos_y*cos_y*Dx + sin_y*sin_y*Dy;
+        // float DxyN = cos_y*sin_y*Dx - sin_y*cos_y*Dy;
+        // float GxxN = -sin_y*Gy;
+        // float GxyN = cos_y*Gx;
+
+        // sum = DxxN*thi_s->S[FKC_STATE_PX] + DxyN*thi_s->S[FKC_STATE_PY] + GxxN*thi_s->S[FKC_STATE_ARX] + GxyN*thi_s->S[FKC_STATE_ARY];
+        // A[FKC_STATE_PX][FKC_STATE_PX] = DxxN;
+        // A[FKC_STATE_PX][FKC_STATE_PY] = DxyN;
+        // A[FKC_STATE_PX][FKC_STATE_QX] = GxxN;
+        // A[FKC_STATE_PX][FKC_STATE_QY] = GxyN;
+
+      }
+      else if (i==FKC_STATE_PY)
+      {
+        // for(int j=0; j<FKC_STATE_DIM; j++){
+        //   float State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][j]*sin_y + State_Est_A_matrix[FKC_STATE_PY][j]*cos_y;
+        //   sum+= State_Est_j_element*thi_s->S[j];
+        //   A[FKC_STATE_PY][j] = State_Est_j_element;
+        // }
+
+        for(int j=0; j<FKC_STATE_DIM; j++){
+          float State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][j]*sin_y + State_Est_A_matrix[FKC_STATE_PY][j]*cos_y;
+          if(j==FKC_STATE_PX){
+            sum+= State_Est_j_element*(cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY]);
+          }
+          else if(j==FKC_STATE_PY){
+            sum+= State_Est_j_element*(sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
+          }
+          else{
+            sum+= State_Est_j_element*thi_s->S[j];
+          }
+          // sum+= State_Est_j_element*RotatedVelstate[j];
+          A[FKC_STATE_PY][j] = State_Est_j_element;
+        }
+
+        // float DyxN = cos_y*sin_y*Dx - sin_y*cos_y*Dy;
+        // float DyyN = sin_y*sin_y*Dx + cos_y*cos_y*Dy;
+        // float GyxN = cos_y*Gy;
+        // float GyyN = sin_y*Gx;
+        
+        // sum = DyxN*thi_s->S[FKC_STATE_PX] + DyyN*thi_s->S[FKC_STATE_PY] + GyxN*thi_s->S[FKC_STATE_ARX] + GyyN*thi_s->S[FKC_STATE_ARY];
+        // A[FKC_STATE_PY][FKC_STATE_PX] = DyxN;
+        // A[FKC_STATE_PY][FKC_STATE_PY] = DyyN;
+        // A[FKC_STATE_PY][FKC_STATE_QX] = GyxN;
+        // A[FKC_STATE_PY][FKC_STATE_QY] = GyyN;
+
+      }
+      else if (i==FKC_STATE_ARX || i==FKC_STATE_ARY)
+      {
+
+        for(int j=0; j<FKC_STATE_DIM; j++){
+          if(j==FKC_STATE_PX){
+            sum+= State_Est_A_matrix[i][j]*(cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY]);
+          }
+          else if(j==FKC_STATE_PY){
+            sum+= State_Est_A_matrix[i][j]*(sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
+          }
+          else{
+            sum+= State_Est_A_matrix[i][j]*thi_s->S[j];
+          }
+          // sum+= State_Est_j_element*RotatedVelstate[j];
+          A[FKC_STATE_PY][j] = State_Est_A_matrix[i][j];
+        }
+
+
+      }
+      else{
+        for(int j=0; j<FKC_STATE_DIM; j++){
+          sum+= State_Est_A_matrix[i][j]*thi_s->S[j];
+          // sum+= State_Est_A_matrix[i][j]*RotatedVelstate[j]; 
+          A[i][j] = State_Est_A_matrix[i][j];
+        }
       }
       stateDerivative[i] = sum;
     }
   }
   else{
+
+    // Create a copy of the state to use it while calculation without changing the actuale state
+    float stateDelta[FKC_STATE_DIM];
+    for(int i=0; i<FKC_STATE_DIM; i++){
+      stateDelta[i] = thi_s->S[i];
+    }
+
+    float stateDerivativeDelta[FKC_STATE_DIM];
+    float delta = 0.0001;
+
     // ========= DYNAMICS LINEARIZATION FOR UNCERTAINTY =========
     /*
     * The A matrix has the following structure
@@ -828,6 +984,10 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   // Here I need to update the state using Euler update and then update the uncertainty matrix
   // =========== UPDATE THE STATE ===========
   for(int i=0; i<FKC_STATE_DIM; i++){
+    // Remove update for speed
+    // if(i==FKC_STATE_PX|| i==FKC_STATE_PY||i==FKC_STATE_PZ){
+    //   continue;
+    // }
     float temp = thi_s->S[i] + dt*stateDerivative[i];
     thi_s->S[i] = temp;
   }

@@ -202,7 +202,7 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
     // -----------------------------
 
-
+    // error_m[F_ERR_YAW] = error_m[F_ERR_YAW]+1.5;
 
     mat_mult(&Km, &tmpNN2m, &tmpNN1m);
 
@@ -233,12 +233,13 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     }
     if(manual==4){
 
-      control->flap_1 = sin_table[table_iter];
-      table_iter = (table_iter+20)%table_size;
+      control->flap_1 =  0.5*sin_table[table_iter];
+      control->flap_2 = -0.5*sin_table[table_iter];
+      control->flap_3 =  0.5*sin_table[table_iter];
+      control->flap_4 = -0.5*sin_table[table_iter];
+
+      table_iter = (table_iter+2)%table_size;
       // control->flap_1 = ext_ctrl_m1;
-      control->flap_2 = 0.0;
-      control->flap_3 = 0.0;
-      control->flap_4 = 0.0;
     }
     if(manual==5){
       control->flap_1 = 0.3146;
