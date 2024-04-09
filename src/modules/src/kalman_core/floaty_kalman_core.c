@@ -1089,56 +1089,58 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   // Update the position uncertainty values (diag only) Then corulated values between position and velocity
   for(int i=0; i<3; i++){
       p = thi_s->P[i][i]+dt*(thi_s->P[i][i+3] + thi_s->P[i+3][i]); // Updating using the first part of P* = AP + PA' + Q
-      if (isnan(p) || p > MAX_COVARIANCE) {
-        thi_s->P[i][i] = MAX_COVARIANCE;
-      } else if (p < MIN_COVARIANCE ) {
-        thi_s->P[i][i] = MIN_COVARIANCE;
-      }
-      else{
-        thi_s->P[i][i] = p;
-      }
+      thi_s->P[i][i] = p;
+      // if (isnan(p) || p > MAX_COVARIANCE) {
+      //   thi_s->P[i][i] = MAX_COVARIANCE;
+      // } else if (p < MIN_COVARIANCE ) {
+      //   thi_s->P[i][i] = MIN_COVARIANCE;
+      // }
+      // else{
+      //   thi_s->P[i][i] = p;
+      // }
 
       // update the corulated uncertainty for velocity and position
       p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]) +dt*(thi_s->P[i+3][i+3]+A[i+3][i+3]*thi_s->P[i][i+3]); // Updating using the first part of P* = AP + PA' + Q
-      if (isnan(p) || p > MAX_COVARIANCE) {
-        thi_s->P[i][i+3] = thi_s->P[i+3][i] = MAX_COVARIANCE;
-      } else if (p < MIN_COVARIANCE ) {
-        thi_s->P[i][i+3] = thi_s->P[i+3][i] = MIN_COVARIANCE;
-      }
-      else{
-        thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
-      }
-      // thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
+      thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
+      // if (isnan(p) || p > MAX_COVARIANCE) {
+      //   thi_s->P[i][i+3] = thi_s->P[i+3][i] = MAX_COVARIANCE;
+      // } else if (p < MIN_COVARIANCE ) {
+      //   thi_s->P[i][i+3] = thi_s->P[i+3][i] = MIN_COVARIANCE;
+      // }
+      // else{
+      //   thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
+      // }
   }
 
   // Update the flaps angle uncertainty values (diag only)
   for(int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
       p = thi_s->P[i][i]+dt*2*(A[i][i]*thi_s->P[i][i]); // Updating using the first part of P* = AP + PA' + Q
-      if (isnan(p) || p > MAX_COVARIANCE) {
-        thi_s->P[i][i] = MAX_COVARIANCE;
-      } else if (p < MIN_COVARIANCE ) {
-        thi_s->P[i][i] = MIN_COVARIANCE;
-      }
-      else{
-        thi_s->P[i][i] = p;
-      }
+      thi_s->P[i][i] = p;
+      // if (isnan(p) || p > MAX_COVARIANCE) {
+      //   thi_s->P[i][i] = MAX_COVARIANCE;
+      // } else if (p < MIN_COVARIANCE ) {
+      //   thi_s->P[i][i] = MIN_COVARIANCE;
+      // }
+      // else{
+      //   thi_s->P[i][i] = p;
+      // }
+
   }
 
   // Updateing the small block of the uncertainty matrix
   for(int i=3; i<FKC_STATE_F1; i++){
-    // Maybe here I can remove half the evluations by usign the fact that P is symmetrical
-    // The comment above is already done
+
     for(int j=3; j<FKC_STATE_F1; j++){
       p = thi_s->P[i][j]+dt*(tmpNN2d[i-3][j-3] + tmpNN2d[j-3][i-3]); // Updating using the first part of P* = AP + PA' + Q
-      if (isnan(p) || p > MAX_COVARIANCE) {
-        thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
-      } else if (p < MIN_COVARIANCE ) {
-        thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
-      }
-      else{
-        thi_s->P[i][j] = thi_s->P[j][i] = p;
-      }
-      // thi_s->P[i][j] = thi_s->P[j][i] = p;
+      thi_s->P[i][j] = thi_s->P[j][i] = p;
+    //   if (isnan(p) || p > MAX_COVARIANCE) {
+    //     thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
+    //   } else if (p < MIN_COVARIANCE ) {
+    //     thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
+    //   }
+    //   else{
+    //     thi_s->P[i][j] = thi_s->P[j][i] = p;
+    //   }
     }
   }
 
@@ -1197,55 +1199,55 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   thi_s->P[FKC_STATE_F4][FKC_STATE_F4] += dt*params->procNoiseFlaps;  // add process noise on flap angles
 
 
-  // // Make sure that P is symmetrical
-  // for (int i=0; i<FKC_STATE_DIM; i++) {
-  //   for (int j=i; j<FKC_STATE_DIM; j++) {
-  //     float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i];
-  //     if (isnan(p) || p > MAX_COVARIANCE) {
-  //       thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
-  //     } else if ( i==j && p < MIN_COVARIANCE ) {
-  //       thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
-  //     } else {
-  //       thi_s->P[i][j] = thi_s->P[j][i] = p;
-  //     }
-  //   }
-  // }
+  // Make sure that P is symmetrical
+  for (int i=0; i<FKC_STATE_DIM; i++) {
+    for (int j=i; j<FKC_STATE_DIM; j++) {
+      float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i];
+      if (isnan(p) || p > MAX_COVARIANCE) {
+        thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
+      } else if ( i==j && p < MIN_COVARIANCE ) {
+        thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
+      } else {
+        thi_s->P[i][j] = thi_s->P[j][i] = p;
+      }
+    }
+  }
 
-  // // Make sure that P is symmetrical
-  // // This is enough because the values outside this block are only on the diagonal
-  // for (int i=3; i<FKC_STATE_F1; i++) {
-  //   for (int j=i; j<FKC_STATE_F1; j++) {
-  //     float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i];
-  //     if (isnan(p) || p > MAX_COVARIANCE) {
-  //       thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
-  //     } else if ( i==j && p < MIN_COVARIANCE ) {
-  //       thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
-  //     } else {
-  //       thi_s->P[i][j] = thi_s->P[j][i] = p;
-  //     }
-  //   }
-  // }
+  // Make sure that P is symmetrical
+  // This is enough because the values outside this block are only on the diagonal
+  for (int i=3; i<FKC_STATE_F1; i++) {
+    for (int j=i; j<FKC_STATE_F1; j++) {
+      float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i];
+      if (isnan(p) || p > MAX_COVARIANCE) {
+        thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
+      } else if ( i==j && p < MIN_COVARIANCE ) {
+        thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
+      } else {
+        thi_s->P[i][j] = thi_s->P[j][i] = p;
+      }
+    }
+  }
 
-  // // Limit the uncertainty for position values (diag only)
-  // for(int i=0; i<3; i++){
-  //     p = thi_s->P[i][i]; 
-  //     if (isnan(p) || p > MAX_COVARIANCE) {
-  //       thi_s->P[i][i] = MAX_COVARIANCE;
-  //     } else if (p < MIN_COVARIANCE ) {
-  //       thi_s->P[i][i] = MIN_COVARIANCE;
-  //     }
+  // Limit the uncertainty for position values (diag only)
+  for(int i=0; i<3; i++){
+      p = thi_s->P[i][i]; 
+      if (isnan(p) || p > MAX_COVARIANCE) {
+        thi_s->P[i][i] = MAX_COVARIANCE;
+      } else if (p < MIN_COVARIANCE ) {
+        thi_s->P[i][i] = MIN_COVARIANCE;
+      }
 
-  //     // Updating the correlated uncertainty for the velocity and position information
-  //     p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]); 
-  //     if (isnan(p) || p > MAX_COVARIANCE) {
-  //       thi_s->P[i][i+3] = thi_s->P[i+3][i] = MAX_COVARIANCE;
-  //     } else if (p < MIN_COVARIANCE ) {
-  //       thi_s->P[i][i+3] = thi_s->P[i+3][i] = MIN_COVARIANCE;
-  //     }
-  //     else{
-  //       thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
-  //     }
-  // }
+      // Updating the correlated uncertainty for the velocity and position information
+      p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]); 
+      if (isnan(p) || p > MAX_COVARIANCE) {
+        thi_s->P[i][i+3] = thi_s->P[i+3][i] = MAX_COVARIANCE;
+      } else if (p < MIN_COVARIANCE ) {
+        thi_s->P[i][i+3] = thi_s->P[i+3][i] = MIN_COVARIANCE;
+      }
+      else{
+        thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
+      }
+  }
 
   // // Limit the uncertainty for flaps' angles values (diag only)
   // for(int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
