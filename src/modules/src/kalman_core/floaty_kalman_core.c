@@ -892,6 +892,15 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   }
   else{
 
+    // ------------------------ READ THIS ------------------------
+    // When calculating the A matrix, I need to make sure that I am always having the correct values passed such as R, R_B_F
+    // One idea might be to calculate the things I need inside the floatyKalmanCalculateAerodynamicForceAndTorque() function
+    // This way, I don't need to copy stuff as much as if I do it in another way.
+    // So the idea I have is to pass &thi_s and I pass an array showing which value changed so I can do updates accordingly
+    // Additionally, i am passing &calculationParameters which is has the main calculations inside it so I don't need
+    // to repeat calculations that I have already done such as vAirBodyFrame (if the body rotation does not change)
+
+
     // Create a copy of the state to use it while calculation without changing the actuale state
     float stateDelta[FKC_STATE_DIM];
     for(int i=0; i<FKC_STATE_DIM; i++){
@@ -1044,14 +1053,33 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   // }
 
 
+  float p;
 
   // Temporary matrices for the covariance updates
-  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN1d[FKC_STATE_DIM][FKC_STATE_DIM];
-  static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN1m = { FKC_STATE_DIM, FKC_STATE_DIM, (float*)tmpNN1d};
+  // NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN1d[FKC_STATE_DIM][FKC_STATE_DIM];
+  // static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN1m = { FKC_STATE_DIM, FKC_STATE_DIM, (float*)tmpNN1d};
 
-  // =========== COVARIANCE UPDATE ===========
-  mat_mult(&Am, &thi_s->Pm, &tmpNN1m); // A P
-  float p;
+
+  // =========== OPTIMIZED COVARIANCE UPDATE ===========
+  // These matrices are 10 by 10 blocks of the whole A and P matrices
+
+  NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float Block_Ad[10][10];
+  static arm_matrix_instance_f32 Block_Am = {10, 10, (float*)Block_Ad};
+
+  NO_DMA_CCM_SAFE_ZERO_INIT __attribute__((aligned(4))) static float Block_Pd[10][10];
+  static arm_matrix_instance_f32 Block_Pm = {10, 10, (float*)Block_Pd};
+
+  // This is to save the blocks multiplication results
+  NO_DMA_CCM_SAFE_ZERO_INIT static float tmpNN2d[10][10];
+  static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN2m = { 10, 10, (float*)tmpNN2d};
+
+  for (int i=3; i<13; i++) {
+    for (int j=3; j<13; j++) {
+      Block_Ad[i-3][j-3] = A[i][j];
+      Block_Pd[i-3][j-3] = thi_s->P[i][j];
+    }
+  }
+  mat_mult(&Block_Am, &Block_Pm, &tmpNN2m); // AP for a partial oart
 
   // -------------------------------------------------- 
   // Here I update using the fact that the uncertainty (P) matrix has only diagonal values for position and Flap angles
@@ -1060,29 +1088,88 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   
   // Update the position uncertainty values (diag only) Then corulated values between position and velocity
   for(int i=0; i<3; i++){
-      p = thi_s->P[i][i]+dt*2*(tmpNN1d[i][i]); // Updating using the first part of P* = AP + PA' + Q
-      thi_s->P[i][i] = p;
+      p = thi_s->P[i][i]+dt*(thi_s->P[i][i+3] + thi_s->P[i+3][i]); // Updating using the first part of P* = AP + PA' + Q
+      if (isnan(p) || p > MAX_COVARIANCE) {
+        thi_s->P[i][i] = MAX_COVARIANCE;
+      } else if (p < MIN_COVARIANCE ) {
+        thi_s->P[i][i] = MIN_COVARIANCE;
+      }
+      else{
+        thi_s->P[i][i] = p;
+      }
 
       // update the corulated uncertainty for velocity and position
-      p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]) +dt*(tmpNN1d[i][i+3]+tmpNN1d[i+3][i]); // Updating using the first part of P* = AP + PA' + Q
-      thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
+      p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]) +dt*(thi_s->P[i+3][i+3]+A[i+3][i+3]*thi_s->P[i][i+3]); // Updating using the first part of P* = AP + PA' + Q
+      if (isnan(p) || p > MAX_COVARIANCE) {
+        thi_s->P[i][i+3] = thi_s->P[i+3][i] = MAX_COVARIANCE;
+      } else if (p < MIN_COVARIANCE ) {
+        thi_s->P[i][i+3] = thi_s->P[i+3][i] = MIN_COVARIANCE;
+      }
+      else{
+        thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
+      }
+      // thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
   }
 
   // Update the flaps angle uncertainty values (diag only)
   for(int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
-      p = thi_s->P[i][i]+dt*2*(tmpNN1d[i][i]); // Updating using the first part of P* = AP + PA' + Q
-      thi_s->P[i][i] = p;
+      p = thi_s->P[i][i]+dt*2*(A[i][i]*thi_s->P[i][i]); // Updating using the first part of P* = AP + PA' + Q
+      if (isnan(p) || p > MAX_COVARIANCE) {
+        thi_s->P[i][i] = MAX_COVARIANCE;
+      } else if (p < MIN_COVARIANCE ) {
+        thi_s->P[i][i] = MIN_COVARIANCE;
+      }
+      else{
+        thi_s->P[i][i] = p;
+      }
   }
 
   // Updateing the small block of the uncertainty matrix
   for(int i=3; i<FKC_STATE_F1; i++){
     // Maybe here I can remove half the evluations by usign the fact that P is symmetrical
     // The comment above is already done
-    for(int j=i; j<FKC_STATE_F1; j++){
-      p = thi_s->P[i][j]+dt*(tmpNN1d[i][j] + tmpNN1d[j][i]); // Updating using the first part of P* = AP + PA' + Q
-      thi_s->P[i][j] = thi_s->P[j][i] = p;
+    for(int j=3; j<FKC_STATE_F1; j++){
+      p = thi_s->P[i][j]+dt*(tmpNN2d[i-3][j-3] + tmpNN2d[j-3][i-3]); // Updating using the first part of P* = AP + PA' + Q
+      if (isnan(p) || p > MAX_COVARIANCE) {
+        thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
+      } else if (p < MIN_COVARIANCE ) {
+        thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
+      }
+      else{
+        thi_s->P[i][j] = thi_s->P[j][i] = p;
+      }
+      // thi_s->P[i][j] = thi_s->P[j][i] = p;
     }
   }
+
+  // =========== COVARIANCE UPDATE ===========
+  // mat_mult(&Am, &thi_s->Pm, &tmpNN1m); // A P
+
+  // // Update the position uncertainty values (diag only) Then corulated values between position and velocity
+  // for(int i=0; i<3; i++){
+  //     p = thi_s->P[i][i]+dt*2*(tmpNN1d[i][i]); // Updating using the first part of P* = AP + PA' + Q
+  //     thi_s->P[i][i] = p;
+
+  //     // update the corulated uncertainty for velocity and position
+  //     p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]) +dt*(tmpNN1d[i][i+3]+tmpNN1d[i+3][i]); // Updating using the first part of P* = AP + PA' + Q
+  //     thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
+  // }
+
+  // // Update the flaps angle uncertainty values (diag only)
+  // for(int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
+  //     p = thi_s->P[i][i]+dt*2*(tmpNN1d[i][i]); // Updating using the first part of P* = AP + PA' + Q
+  //     thi_s->P[i][i] = p;
+  // }
+
+  // // Updateing the small block of the uncertainty matrix
+  // for(int i=3; i<FKC_STATE_F1; i++){
+  //   // Maybe here I can remove half the evluations by usign the fact that P is symmetrical
+  //   // The comment above is already done
+  //   for(int j=i; j<FKC_STATE_F1; j++){
+  //     p = thi_s->P[i][j]+dt*(tmpNN1d[i][j] + tmpNN1d[j][i]); // Updating using the first part of P* = AP + PA' + Q
+  //     thi_s->P[i][j] = thi_s->P[j][i] = p;
+  //   }
+  // }
 
 
   // ========= ADDING THE PROCESS NOISE =========
@@ -1124,61 +1211,52 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   //   }
   // }
 
-  // Make sure that P is symmetrical
-  // This is enough because the values outside this block are only on the diagonal
-  for (int i=3; i<FKC_STATE_F1; i++) {
-    for (int j=i; j<FKC_STATE_F1; j++) {
-      float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i];
-      if (isnan(p) || p > MAX_COVARIANCE) {
-        thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
-      } else if ( i==j && p < MIN_COVARIANCE ) {
-        thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
-      } else {
-        thi_s->P[i][j] = thi_s->P[j][i] = p;
-      }
-    }
-  }
+  // // Make sure that P is symmetrical
+  // // This is enough because the values outside this block are only on the diagonal
+  // for (int i=3; i<FKC_STATE_F1; i++) {
+  //   for (int j=i; j<FKC_STATE_F1; j++) {
+  //     float p = 0.5f*thi_s->P[i][j] + 0.5f*thi_s->P[j][i];
+  //     if (isnan(p) || p > MAX_COVARIANCE) {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = MAX_COVARIANCE;
+  //     } else if ( i==j && p < MIN_COVARIANCE ) {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = MIN_COVARIANCE;
+  //     } else {
+  //       thi_s->P[i][j] = thi_s->P[j][i] = p;
+  //     }
+  //   }
+  // }
 
-  // Limit the uncertainty for position values (diag only)
-  for(int i=0; i<3; i++){
-      p = thi_s->P[i][i]; 
-      if (isnan(p) || p > MAX_COVARIANCE) {
-        thi_s->P[i][i] = MAX_COVARIANCE;
-      } else if (p < MIN_COVARIANCE ) {
-        thi_s->P[i][i] = MIN_COVARIANCE;
-      }
+  // // Limit the uncertainty for position values (diag only)
+  // for(int i=0; i<3; i++){
+  //     p = thi_s->P[i][i]; 
+  //     if (isnan(p) || p > MAX_COVARIANCE) {
+  //       thi_s->P[i][i] = MAX_COVARIANCE;
+  //     } else if (p < MIN_COVARIANCE ) {
+  //       thi_s->P[i][i] = MIN_COVARIANCE;
+  //     }
 
-      // Updating the correlated uncertainty for the velocity and position information
-      p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]); 
-      if (isnan(p) || p > MAX_COVARIANCE) {
-        thi_s->P[i][i+3] = thi_s->P[i+3][i] = MAX_COVARIANCE;
-      } else if (p < MIN_COVARIANCE ) {
-        thi_s->P[i][i+3] = thi_s->P[i+3][i] = MIN_COVARIANCE;
-      }
-      else{
-        thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
-      }
-  }
+  //     // Updating the correlated uncertainty for the velocity and position information
+  //     p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]); 
+  //     if (isnan(p) || p > MAX_COVARIANCE) {
+  //       thi_s->P[i][i+3] = thi_s->P[i+3][i] = MAX_COVARIANCE;
+  //     } else if (p < MIN_COVARIANCE ) {
+  //       thi_s->P[i][i+3] = thi_s->P[i+3][i] = MIN_COVARIANCE;
+  //     }
+  //     else{
+  //       thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
+  //     }
+  // }
 
-  // Limit the uncertainty for flaps' angles values (diag only)
-  for(int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
-      p = thi_s->P[i][i]; 
-      if (isnan(p) || p > MAX_COVARIANCE) {
-        thi_s->P[i][i] = MAX_COVARIANCE;
-      } else if (p < MIN_COVARIANCE ) {
-        thi_s->P[i][i] = MIN_COVARIANCE;
-      }
-  }
+  // // Limit the uncertainty for flaps' angles values (diag only)
+  // for(int i=FKC_STATE_F1; i<FKC_STATE_DIM; i++){
+  //     p = thi_s->P[i][i]; 
+  //     if (isnan(p) || p > MAX_COVARIANCE) {
+  //       thi_s->P[i][i] = MAX_COVARIANCE;
+  //     } else if (p < MIN_COVARIANCE ) {
+  //       thi_s->P[i][i] = MIN_COVARIANCE;
+  //     }
+  // }
 
-
-
-  // ------------------------ READ THIS ------------------------
-  // When calculating the A matrix, I need to make sure that I am always having the correct values passed such as R, R_B_F
-  // One idea might be to calculate the things I need inside the floatyKalmanCalculateAerodynamicForceAndTorque() function
-  // This way, I don't need to copy stuff as much as if I do it in another way.
-  // So the idea I have is to pass &thi_s and I pass an array showing which value changed so I can do updates accordingly
-  // Additionally, i am passing &calculationParameters which is has the main calculations inside it so I don't need
-  // to repeat calculations that I have already done such as vAirBodyFrame (if the body rotation does not change)
 
 
 

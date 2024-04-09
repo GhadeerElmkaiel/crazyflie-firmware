@@ -244,8 +244,19 @@ static void stabilizerTask(void* param)
   //Wait for the system to be fully started to start stabilization loop
   systemWaitStart();
 
-  DEBUG_PRINT("Wait for sensor calibration...\n");
 
+  // floaty_control.flap_1=0;
+  // floaty_control.flap_2=0;
+  // floaty_control.flap_3=0;
+  // floaty_control.flap_4=0;
+  // powerDistribution(&motorPower, &floaty_control);
+  // motorsSetRatio(MOTOR_M1, motorPower.m1);
+  // motorsSetRatio(MOTOR_M2, motorPower.m2);
+  // motorsSetRatio(MOTOR_M3, motorPower.m3);
+  // motorsSetRatio(MOTOR_M4, motorPower.m4);
+
+
+  DEBUG_PRINT("Wait for sensor calibration...\n");
   // Wait for sensors to be calibrated
   lastWakeTime = xTaskGetTickCount();
   while(!sensorsAreCalibrated()) {
