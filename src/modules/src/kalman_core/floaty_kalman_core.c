@@ -875,7 +875,7 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
             sum+= State_Est_A_matrix[i][j]*thi_s->S[j];
           }
           // sum+= State_Est_j_element*RotatedVelstate[j];
-          A[FKC_STATE_PY][j] = State_Est_A_matrix[i][j];
+          A[i][j] = State_Est_A_matrix[i][j];
         }
 
 
@@ -984,7 +984,7 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   // Here I need to update the state using Euler update and then update the uncertainty matrix
   // =========== UPDATE THE STATE ===========
   for(int i=0; i<FKC_STATE_DIM; i++){
-    // Remove update for speed
+    // // Remove update for speed
     // if(i==FKC_STATE_PX|| i==FKC_STATE_PY||i==FKC_STATE_PZ){
     //   continue;
     // }

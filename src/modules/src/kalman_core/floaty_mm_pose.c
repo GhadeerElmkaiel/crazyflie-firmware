@@ -89,7 +89,7 @@ void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasureme
   
   // h[FKC_STATE_Q3] = 0;
 
-  float dt=0.01;
+  float dt=0.002;
   float value;
   float value_2;
   for (int i=0; i<3; i++) {
@@ -104,7 +104,7 @@ void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasureme
 
       // For the velocity, we use higher delay compensation
       // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value - thi_s->S[FKC_STATE_X+i], value_2 - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
-      
+
       bef_2_prev_vel[i] = bef_prev_vel[i];        // update the velocity three timesteps back
       bef_prev_vel[i] = prev_vel[i];              // Update the velocity two steps ago to become the last velocity
       prev_vel[i] = thi_s->S[FKC_STATE_PX+i];     // Update the last velocity to become the current velocity

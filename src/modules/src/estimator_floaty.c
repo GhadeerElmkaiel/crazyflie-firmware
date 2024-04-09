@@ -432,8 +432,8 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
 
   floatyKalmanCorePredict(&floatyCoreData, &input, dt, &coreParams);
 
-  floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroAverageRotated);
-  // floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroFiltered);
+  // floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroAverageRotated);
+  floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroFiltered);
   return true;
 }
 

@@ -233,10 +233,10 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     }
     if(manual==4){
 
-      control->flap_1 =  0.5*sin_table[table_iter];
-      control->flap_2 = -0.5*sin_table[table_iter];
-      control->flap_3 =  0.5*sin_table[table_iter];
-      control->flap_4 = -0.5*sin_table[table_iter];
+      control->flap_1 =  0.7*sin_table[table_iter];
+      control->flap_2 = -0.7*sin_table[table_iter];
+      control->flap_3 =  0.7*sin_table[table_iter];
+      control->flap_4 = -0.7*sin_table[table_iter];
 
       table_iter = (table_iter+2)%table_size;
       // control->flap_1 = ext_ctrl_m1;
