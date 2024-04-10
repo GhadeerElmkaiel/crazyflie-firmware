@@ -17,6 +17,7 @@
 #include "command_lookup_table.h"
 #include "LQR_control_matrix.h"
 #include "floaty_params.h"
+#include "supervisor.h"
 #include <stdio.h>
 
 #define ATTITUDE_UPDATE_DT    (float)(1.0f/ATTITUDE_RATE)
@@ -217,6 +218,10 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     control->flap_2 = control_m[1] + setpoint->flaps.flap_2;
     control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
     control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
+    supervisorControllerStateUpdate(true);
+    if(manual != 0){
+      supervisorControllerStateUpdate(false);
+    }
 
     if(manual==1){
       control->flap_1 = ext_ctrl_m1;

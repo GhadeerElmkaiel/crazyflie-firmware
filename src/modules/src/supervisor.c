@@ -39,10 +39,14 @@
 
 /* Number of times in a row we need to see a condition before acting upon it */
 #define SUPERVISOR_HYSTERESIS_THRESHOLD 30
+#define SUPERVISOR_VIBRATION_THRESHOLD 50
+#define SUPERVISOR_STABLE_THRESHOLD 50
 
 static bool canFly;
 static bool isFlying;
 static bool isTumbled;
+static bool isRobotVibrating;
+static bool isControllerRunning;
 
 bool supervisorCanFly()
 {
@@ -51,13 +55,69 @@ bool supervisorCanFly()
 
 bool supervisorIsFlying()
 {
-  return isFlying;
+  // return isFlying;
+  return isRobotVibrating;
 }
 
 bool supervisorIsTumbled()
 {
   return isTumbled;
 }
+
+bool supervisorIsControllerRunning()
+{
+  return isControllerRunning;
+}
+
+void supervisorControllerStateUpdate(bool running)
+{
+  isControllerRunning = running;
+}
+
+bool RobotVibratingCheck(const sensorData_t *data)
+{
+
+  const float gyro_tolerance = 0.5;
+  static uint32_t hysteresis_vibration = 0;
+  static uint32_t hysteresis_no_vibration = 0;
+  //
+  // We need a SUPERVISOR_HYSTERESIS_THRESHOLD amount of readings that indicate
+  // that the wind tunnel is running or not. We check gyro readings on all axis 
+  // only when the readings number get larger than a threashold
+  // 
+  if (data->gyro.x >= gyro_tolerance || data->gyro.x <= -gyro_tolerance ) {
+    hysteresis_no_vibration = 0;
+    hysteresis_vibration++;
+    if (hysteresis_vibration > SUPERVISOR_VIBRATION_THRESHOLD) {
+      return true;
+    }
+  }
+  else if (data->gyro.y >= gyro_tolerance || data->gyro.y <= -gyro_tolerance ) {
+    hysteresis_no_vibration = 0;
+    hysteresis_vibration++;
+    if (hysteresis_vibration > SUPERVISOR_VIBRATION_THRESHOLD) {
+      return true;
+    }
+  }
+  else if (data->gyro.z >= gyro_tolerance || data->gyro.z <= -gyro_tolerance ) {
+    hysteresis_no_vibration = 0;
+    hysteresis_vibration++;
+    if (hysteresis_vibration > SUPERVISOR_VIBRATION_THRESHOLD) {
+      return true;
+    }
+  }
+  else {
+    
+    hysteresis_no_vibration++;
+    if (hysteresis_no_vibration > SUPERVISOR_STABLE_THRESHOLD) {
+      hysteresis_vibration = 0;
+      return false;
+    }
+    return false;
+  }
+
+  // return false;
+  }
 
 //
 // We cannot fly if the Crazyflie is tumbled and we cannot fly if the Crazyflie
@@ -106,7 +166,8 @@ static bool isTumbledCheck(const sensorData_t *data)
     if (hysteresis > SUPERVISOR_HYSTERESIS_THRESHOLD) {
       return true;
     }
-  } else {
+  }
+  else {
     hysteresis = 0;
   }
 
@@ -115,6 +176,7 @@ static bool isTumbledCheck(const sensorData_t *data)
 
 void supervisorUpdate(const sensorData_t *data)
 {
+  isRobotVibrating = RobotVibratingCheck(data);
   isFlying = isFlyingCheck();
 
   isTumbled = isTumbledCheck(data);

@@ -164,6 +164,7 @@ static floaty_control_t flapsAngles;
 static Axis3f accLatest;
 static Axis3f gyroLatest;
 static bool quadIsFlying = false;
+static bool floatyIsFlying = false;
 
 // static OutlierFilterLhState_t sweepOutlierFilterState;
 
@@ -421,7 +422,7 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
   gyroAccumulator = (Axis3f){.axis={0}};
   gyroAccumulatorCount = 0;
 
-  quadIsFlying = supervisorIsFlying();
+  floatyIsFlying = supervisorIsFlying();
 
   floaty_control_t input;
   input.flap_1 = flapsAngles.flap_1;
@@ -429,8 +430,9 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
   input.flap_3 = flapsAngles.flap_3;
   input.flap_4 = flapsAngles.flap_4;
 
-
-  floatyKalmanCorePredict(&floatyCoreData, &input, dt, &coreParams);
+  if(floatyIsFlying){
+    floatyKalmanCorePredict(&floatyCoreData, &input, dt, &coreParams);
+  }
 
   // floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroAverageRotated);
   floatyKalmanCoreUpdateWithGyro(&floatyCoreData, &gyroFiltered);

@@ -33,3 +33,6 @@ void supervisorUpdate(const sensorData_t *data);
 bool supervisorCanFly(void);
 bool supervisorIsFlying(void);
 bool supervisorIsTumbled(void);
+bool supervisorIsControllerRunning();
+bool RobotVibratingCheck(const sensorData_t *data);
+void supervisorControllerStateUpdate(bool running);
