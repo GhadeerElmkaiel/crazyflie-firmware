@@ -54,6 +54,7 @@ static float ext_ctrl_m1 = 0.0;
 static float ext_ctrl_m2 = 0.0;
 static float ext_ctrl_m3 = 0.0;
 static float ext_ctrl_m4 = 0.0;
+static float target_yaw = 0.0;
 static uint8_t manual = 1;
 
 static floaty_control_t* input_last;
@@ -202,7 +203,11 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
     // -----------------------------
 
-    // error_m[F_ERR_YAW] = error_m[F_ERR_YAW]+1.5;
+    error_m[F_ERR_YAW] = error_m[F_ERR_YAW]+target_yaw;
+    if(error_m[F_ERR_YAW] > PI/2)
+      error_m[F_ERR_YAW] = error_m[F_ERR_YAW] - PI;
+    else if(error_m[F_ERR_YAW] < -PI/2)
+      error_m[F_ERR_YAW] = error_m[F_ERR_YAW] + PI;
 
     mat_mult(&Km, &tmpNN2m, &tmpNN1m);
 
@@ -490,6 +495,10 @@ PARAM_GROUP_START(extCtrl)
  * @brief A parameter to set the type of the control
  */
   PARAM_ADD_CORE(LOG_UINT8, manual, &manual)
+/**
+ * @brief A parameter to set the target yaw angle
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, target_yaw, &target_yaw)
 /**
  * @brief The controller output for M1 (in Radian)
  */
