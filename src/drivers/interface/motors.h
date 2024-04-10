@@ -321,6 +321,11 @@ bool motorsTest(void);
  * Stops all the motors.
  */
 void motorsStop();
+
+/**
+ * Set the servos to hover configuration.
+ */
+void motorsHover();
 /*
  * Enable PWM output for all motors
  */

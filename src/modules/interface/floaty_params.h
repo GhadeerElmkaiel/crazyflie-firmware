@@ -13,6 +13,12 @@ extern float flapHoverAng;
 #define FLAP_4_HOVER_ANGLE -flapHoverAng
 #define _PI 3.14159
 
+extern int16_t motShift1;
+extern int16_t motShift2;
+extern int16_t motShift3;
+extern int16_t motShift4;
+
+
 // The specification says that it has a noise of 0.1 degrees.
 // We additionally multiply by two to be conservative.
 // float stdGyro = 0.1*3.14/180*2;

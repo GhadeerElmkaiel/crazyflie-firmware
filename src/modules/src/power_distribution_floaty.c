@@ -35,6 +35,8 @@
 
 #include "debug.h"
 
+#include "floaty_params.h"
+
 #ifndef CONFIG_MOTORS_DEFAULT_IDLE_THRUST
 #  define DEFAULT_IDLE_THRUST 0
 #else
@@ -48,10 +50,15 @@
 // static int16_t motShift4 = 4200;
 
 
-static int16_t motShift1 = -13600;
-static int16_t motShift2 = -5700;
-static int16_t motShift3 = -7000;
-static int16_t motShift4 = 4400;
+// static int16_t motShift1 = -13600;
+// static int16_t motShift2 = -5700;
+// static int16_t motShift3 = -7000;
+// static int16_t motShift4 = 4400;
+
+int16_t motShift1 = -13600;
+int16_t motShift2 = -5700;
+int16_t motShift3 = -7000;
+int16_t motShift4 = 4400;
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 

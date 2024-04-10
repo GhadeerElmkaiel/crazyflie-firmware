@@ -205,10 +205,11 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     // -----------------------------
 
     error_m[F_ERR_YAW] = error_m[F_ERR_YAW]+target_yaw;
-    if(error_m[F_ERR_YAW] > PI/2)
-      error_m[F_ERR_YAW] = error_m[F_ERR_YAW] - PI;
-    else if(error_m[F_ERR_YAW] < -PI/2)
-      error_m[F_ERR_YAW] = error_m[F_ERR_YAW] + PI;
+    // // This step is done on the offboard planner
+    // if(error_m[F_ERR_YAW] > PI/2)
+    //   error_m[F_ERR_YAW] = error_m[F_ERR_YAW] - PI;
+    // else if(error_m[F_ERR_YAW] < -PI/2)
+    //   error_m[F_ERR_YAW] = error_m[F_ERR_YAW] + PI;
 
     mat_mult(&Km, &tmpNN2m, &tmpNN1m);
 

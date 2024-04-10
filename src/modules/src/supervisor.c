@@ -40,7 +40,7 @@
 /* Number of times in a row we need to see a condition before acting upon it */
 #define SUPERVISOR_HYSTERESIS_THRESHOLD 30
 #define SUPERVISOR_VIBRATION_THRESHOLD 50
-#define SUPERVISOR_STABLE_THRESHOLD 50
+#define SUPERVISOR_STABLE_THRESHOLD 80
 
 static bool canFly;
 static bool isFlying;
@@ -77,9 +77,11 @@ void supervisorControllerStateUpdate(bool running)
 bool RobotVibratingCheck(const sensorData_t *data)
 {
 
-  const float gyro_tolerance = 0.5;
+  const float gyro_tolerance = 0.8;
+  const float gyro_stable_tolerance = 0.3;
   static uint32_t hysteresis_vibration = 0;
   static uint32_t hysteresis_no_vibration = 0;
+  static bool vibration_detected = false;
   //
   // We need a SUPERVISOR_HYSTERESIS_THRESHOLD amount of readings that indicate
   // that the wind tunnel is running or not. We check gyro readings on all axis 
@@ -89,6 +91,7 @@ bool RobotVibratingCheck(const sensorData_t *data)
     hysteresis_no_vibration = 0;
     hysteresis_vibration++;
     if (hysteresis_vibration > SUPERVISOR_VIBRATION_THRESHOLD) {
+      vibration_detected = true;
       return true;
     }
   }
@@ -96,6 +99,7 @@ bool RobotVibratingCheck(const sensorData_t *data)
     hysteresis_no_vibration = 0;
     hysteresis_vibration++;
     if (hysteresis_vibration > SUPERVISOR_VIBRATION_THRESHOLD) {
+      vibration_detected = true;
       return true;
     }
   }
@@ -103,17 +107,21 @@ bool RobotVibratingCheck(const sensorData_t *data)
     hysteresis_no_vibration = 0;
     hysteresis_vibration++;
     if (hysteresis_vibration > SUPERVISOR_VIBRATION_THRESHOLD) {
+      vibration_detected = true;
       return true;
     }
   }
   else {
+    if (data->gyro.x <= gyro_stable_tolerance && data->gyro.y <= gyro_stable_tolerance  && data->gyro.z <= gyro_stable_tolerance) {
+      hysteresis_no_vibration++;
+    }
     
-    hysteresis_no_vibration++;
     if (hysteresis_no_vibration > SUPERVISOR_STABLE_THRESHOLD) {
       hysteresis_vibration = 0;
+      vibration_detected = false;
       return false;
     }
-    return false;
+    return vibration_detected;
   }
 
   // return false;

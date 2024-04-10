@@ -45,6 +45,10 @@
 #include "log.h"
 #include "param.h"
 
+
+#include "floaty_params.h"
+#include "power_distribution.h"
+
 static bool motorSetEnable = false;
 static uint32_t motorPower[] = {0, 0, 0, 0};    // user-requested PWM signals
 static uint16_t motorPowerSet[] = {0, 0, 0, 0}; // user-requested PWM signals (overrides)
@@ -329,8 +333,11 @@ void motorsInit(const MotorPerifDef** motorMapSelect)
 
   isInit = true;
 
-  // Output zero power
-  motorsStop();
+  // // Output zero power
+  // motorsStop();
+
+  // Set flaps to hover configuration
+  motorsHover();
 }
 
 void motorsDeInit(const MotorPerifDef** motorMapSelect)
@@ -378,6 +385,16 @@ bool motorsTest(void)
   return isInit;
 }
 
+// Set flaps to hover configuration
+void motorsHover()
+{
+  motorsSetRatio(MOTOR_M1, FLAP_1_HOVER_ANGLE*RAD_TO_PWM + PWM_MID_VALUE + motShift1);
+  motorsSetRatio(MOTOR_M2, FLAP_2_HOVER_ANGLE*RAD_TO_PWM + PWM_MID_VALUE + motShift2);
+  motorsSetRatio(MOTOR_M3, FLAP_3_HOVER_ANGLE*RAD_TO_PWM + PWM_MID_VALUE + motShift3);
+  motorsSetRatio(MOTOR_M4, FLAP_4_HOVER_ANGLE*RAD_TO_PWM + PWM_MID_VALUE + motShift4);
+}
+
+// Set motors values to zero. In case of servo go to beginning
 void motorsStop()
 {
   motorsSetRatio(MOTOR_M1, 0);
