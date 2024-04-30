@@ -304,21 +304,21 @@ bool crtpFloatyCommanderHighLevelGetSetpoint(setpoint_t* setpoint, const state_t
   if (!RATE_DO_EXECUTE(RATE_HL_COMMANDER, tick)) {
     return false;
   }
-  setpoint->position.x = 0;
-  setpoint->position.y = 0;
-  setpoint->position.z = 0;
+  // setpoint->position.x = 0;
+  // setpoint->position.y = 0;
+  // setpoint->position.z = 0;
 
-  setpoint->velocity.x = 0;
-  setpoint->velocity.y = 0;
-  setpoint->velocity.z = 0;
+  // setpoint->velocity.x = 0;
+  // setpoint->velocity.y = 0;
+  // setpoint->velocity.z = 0;
 
-  setpoint->attitude.roll=0;
-  setpoint->attitude.pitch=0;
-  setpoint->attitude.yaw=0;
+  // setpoint->attitude.roll=0;
+  // setpoint->attitude.pitch=0;
+  // setpoint->attitude.yaw=0;
 
-  setpoint->attitudeRate.roll=0;
-  setpoint->attitudeRate.pitch=0;
-  setpoint->attitudeRate.yaw=0;
+  // setpoint->attitudeRate.roll=0;
+  // setpoint->attitudeRate.pitch=0;
+  // setpoint->attitudeRate.yaw=0;
 
   setpoint->flaps.flap_1 = FLAP_1_HOVER_ANGLE;
   setpoint->flaps.flap_2 = FLAP_2_HOVER_ANGLE;

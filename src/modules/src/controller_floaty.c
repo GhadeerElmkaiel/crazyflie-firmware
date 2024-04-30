@@ -16,6 +16,7 @@
 #include "floaty_kalman_core.h"
 #include "command_lookup_table.h"
 #include "LQR_control_matrix.h"
+#include "Floaty_control_params.h"
 #include "floaty_params.h"
 #include "supervisor.h"
 #include <stdio.h>
@@ -51,11 +52,32 @@ static int table_iter = 0;
 static float ctrl_output_log[] = {0, 0, 0, 0};
 static float ctrl_motor_log[] = {0, 0, 0, 0};
 // static float ext_ctrl[] = {0, 0, 0, 0};
-static float ext_ctrl_m1 = 0.0;
-static float ext_ctrl_m2 = 0.0;
-static float ext_ctrl_m3 = 0.0;
-static float ext_ctrl_m4 = 0.0;
+static float ext_ctrl_m1 =  0.3;
+static float ext_ctrl_m2 = -0.3;
+static float ext_ctrl_m3 =  0.3;
+static float ext_ctrl_m4 = -0.3;
+
 static float target_yaw = 0.0;
+static float target_roll = 0.0;
+static float target_pitch = 0.0;
+
+static float spatial_err_limit = 0.15;
+
+// Temporary matrices for the error PID
+NO_DMA_CCM_SAFE_ZERO_INIT static float error_prev_d[F_ERR_DIM];
+NO_DMA_CCM_SAFE_ZERO_INIT static float error_I_d[F_ERR_DIM];
+NO_DMA_CCM_SAFE_ZERO_INIT static float error_D_d[F_ERR_DIM];
+
+// Temporary matrix for the sum of the PID effect
+NO_DMA_CCM_SAFE_ZERO_INIT static float error_PID_d[F_ERR_DIM];
+
+// static float x_err_int = 0.0;
+// static float y_err_int = 0.0;
+// static float z_err_int = 0.0;
+
+// bool use_I_ctrl = false;
+bool test_rate_PID = true;
+
 static uint8_t manual = 1;
 
 static floaty_control_t* input_last;
@@ -89,6 +111,11 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
     static __attribute__((aligned(4))) arm_matrix_instance_f32 Km = { 4, F_ERR_DIM, (float *)K_matrix};
 
+    // Temporary matrices for the PID
+    static __attribute__((aligned(4))) arm_matrix_instance_f32 Pm = { 1, F_ERR_DIM, (float *)P_vector};
+    static __attribute__((aligned(4))) arm_matrix_instance_f32 Im = { 1, F_ERR_DIM, (float *)I_vector};
+    static __attribute__((aligned(4))) arm_matrix_instance_f32 Dm = { 1, F_ERR_DIM, (float *)D_vector};
+
     // Temporary matrix for the control
     NO_DMA_CCM_SAFE_ZERO_INIT static float control_m[4];
     static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN1m = { 4, 1, (float *)control_m};
@@ -97,6 +124,13 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     NO_DMA_CCM_SAFE_ZERO_INIT static float error_m[F_ERR_DIM];
     static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN2m = { F_ERR_DIM, 1, (float *)error_m};
   
+
+    // Temporary matrix for compined control vector (compine axis components)
+    NO_DMA_CCM_SAFE_ZERO_INIT static float compined_PID_d[4];
+    static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN3m = { 4, 1, (float *)compined_PID_d};
+
+    static __attribute__((aligned(4))) arm_matrix_instance_f32 tmpNN4m = { 4, 4, (float *)u_vector};
+
     // floatyKalmanCoreData_t* coreData;
     // getCoreDataFromState(coreData, state);
     // float dt = 0.01;
@@ -202,7 +236,26 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     error_m[F_ERR_PY] = rotated_error[1][1];
     error_m[F_ERR_PZ] = rotated_error[2][1];
 
-    // -----------------------------
+    // -----------------------------------------
+    // ---------- Limit spatial error ----------
+    // -----------------------------------------
+    if(error_m[F_ERR_X]>spatial_err_limit){
+      error_m[F_ERR_X] = spatial_err_limit;
+    }
+    else if (error_m[F_ERR_X]<-spatial_err_limit)
+    {
+      error_m[F_ERR_X] = -spatial_err_limit;
+    }
+    
+    if(error_m[F_ERR_Y]>spatial_err_limit){
+      error_m[F_ERR_Y] = spatial_err_limit;
+    }
+    else if (error_m[F_ERR_Y]<-spatial_err_limit)
+    {
+      error_m[F_ERR_Y] = -spatial_err_limit;
+    }
+
+    // -----------------------------------------
 
     error_m[F_ERR_YAW] = error_m[F_ERR_YAW]+target_yaw;
     // // This step is done on the offboard planner
@@ -211,17 +264,94 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     // else if(error_m[F_ERR_YAW] < -PI/2)
     //   error_m[F_ERR_YAW] = error_m[F_ERR_YAW] + PI;
 
-    mat_mult(&Km, &tmpNN2m, &tmpNN1m);
 
 
-    // Add the hovering angles to the control results
-    control->flap_1 = control_m[0] + setpoint->flaps.flap_1;
-    control->flap_2 = control_m[1] + setpoint->flaps.flap_2;
-    control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
-    control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
-    supervisorControllerStateUpdate(true);
+    // mat_mult(&Km, &tmpNN2m, &tmpNN1m);
+
+
+    if(test_rate_PID && state->connectedToOffboard==true){
+
+      for(int iter=0; iter<F_ERR_ARX; iter++){
+        error_I_d[iter] = error_I_d[iter] + error_m[iter]*control_dt;
+        error_D_d[iter] = (error_m[iter]-error_prev_d[iter])/control_dt;
+        error_PID_d[iter] = error_m[iter]*P_vector[iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
+        error_prev_d[iter] = error_m[iter];
+      }
+
+      // // Adding target angle to attitude control 
+      // for(int iter=F_ERR_ARX; iter<F_ERR_F1; iter++){
+      //   float targetAngRate = error_m[iter-3];
+      //   float rateLimit = 3;
+      //   if(targetAngRate>rateLimit){
+      //     targetAngRate = rateLimit;
+      //   }
+      //   else if(targetAngRate<-rateLimit){
+      //     targetAngRate = -rateLimit;
+      //   }
+      //   error_m[iter] +=targetAngRate;
+      // }
+
+
+      for(int iter=F_ERR_ARX; iter<F_ERR_DIM; iter++){
+        error_I_d[iter] = error_I_d[iter] + error_m[iter]*control_dt;
+        error_D_d[iter] = (error_m[iter]-error_prev_d[iter])/control_dt;
+        error_PID_d[iter] = error_m[iter]*P_vector[iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
+        error_prev_d[iter] = error_m[iter];
+      }
+
+      compined_PID_d[0] = error_PID_d[0] + error_PID_d[3] + error_PID_d[7] + error_PID_d[10];
+      compined_PID_d[1] = error_PID_d[1] + error_PID_d[4] + error_PID_d[6] + error_PID_d[9];
+      compined_PID_d[2] = error_PID_d[2] + error_PID_d[5];
+      compined_PID_d[3] = error_PID_d[8] + error_PID_d[11];
+
+      // Multiply the u matrix by the compined PID to generate the control matrix
+      mat_mult(&tmpNN4m, &tmpNN3m, &tmpNN1m);
+    }
+
+    // if(use_I_ctrl){
+    //   static __attribute__((aligned(4))) arm_matrix_instance_f32 pos_I_matrix_m = { 4, 3, (float *)pos_I_matrix};
+
+    //   NO_DMA_CCM_SAFE_ZERO_INIT static float int_control[4];
+    //   static __attribute__((aligned(4))) arm_matrix_instance_f32 int_control_m = { 4, 1, (float *)int_control};
+
+    //   static __attribute__((aligned(4))) arm_matrix_instance_f32 pos_error_I_m = { 3, 1, (float *)pos_error_I};
+
+    //   mat_mult(&pos_I_matrix_m, &pos_error_I_m, &int_control_m);
+
+    //   for(int iter=0; iter<4; iter++){
+    //     control_m[iter] += int_control[iter];
+    //   }
+
+
+    // }
+
+
+    // Reset I and D error values if manual control activated
     if(manual != 0){
       supervisorControllerStateUpdate(false);
+
+      for(int iter=0; iter<F_ERR_DIM; iter++){
+        error_I_d[iter] = 0;
+        error_prev_d[iter] = 0;
+      }
+      // // Reset error integration
+      // pos_error_I[0] = 0;
+      // pos_error_I[1] = 0;
+      // pos_error_I[2] = 0;
+    }
+    else{
+      // Add the hovering angles to the control results
+      control->flap_1 = control_m[0] + setpoint->flaps.flap_1;
+      control->flap_2 = control_m[1] + setpoint->flaps.flap_2;
+      control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
+      control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
+
+      // // Integrate error
+      // pos_error_I[0] += error_m[F_ERR_X]*control_dt;
+      // pos_error_I[1] += error_m[F_ERR_Y]*control_dt;
+      // pos_error_I[2] += error_m[F_ERR_Z]*control_dt;
+
+      supervisorControllerStateUpdate(true);
     }
 
     if(manual==1){
@@ -230,53 +360,75 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       control->flap_3 = ext_ctrl_m3;
       control->flap_4 = ext_ctrl_m4;
     }
-    if(manual==2){
-      control->flap_1 = FLAP_1_HOVER_ANGLE;
-      control->flap_2 = FLAP_2_HOVER_ANGLE;
-      control->flap_3 = FLAP_3_HOVER_ANGLE;
-      control->flap_4 = FLAP_4_HOVER_ANGLE;
-    }
-    if(manual==3){
-      control->flap_1 = 0.0;
-      control->flap_2 = 0.0;
-      control->flap_3 = 0.0;
-      control->flap_4 = 0.0;
-    }
-    if(manual==4){
+    else{
+      if(manual==2){
+        control->flap_1 = FLAP_1_HOVER_ANGLE;
+        control->flap_2 = FLAP_2_HOVER_ANGLE;
+        control->flap_3 = FLAP_3_HOVER_ANGLE;
+        control->flap_4 = FLAP_4_HOVER_ANGLE;
+      }
+      else{
 
-      control->flap_1 =  0.7*sin_table[table_iter];
-      control->flap_2 = -0.7*sin_table[table_iter];
-      control->flap_3 =  0.7*sin_table[table_iter];
-      control->flap_4 = -0.7*sin_table[table_iter];
+        if(manual==4){
 
-      table_iter = (table_iter+2)%table_size;
-      // control->flap_1 = ext_ctrl_m1;
-    }
-    if(manual==5){
-      control->flap_1 = 0.3146;
-      control->flap_2 = -0.3146;
-      control->flap_3 = 0.3146;
-      control->flap_4 = -0.3146;
-    }
-    if(manual==6){
-      control->flap_1 = 0.3146;
-      control->flap_2 = -0.3646;
-      control->flap_3 = 0.3146;
-      control->flap_4 = -0.3646;
-    }
-    if(manual==7){
-      control->flap_1 = 0.4146;
-      control->flap_2 = -0.3146;
-      control->flap_3 = 0.4146;
-      control->flap_4 = -0.3146;
-    }
+          control->flap_1 = FLAP_1_HOVER_ANGLE*sqrt_cos_table[table_iter];
+          control->flap_2 = FLAP_2_HOVER_ANGLE*sqrt_cos_table[table_iter];
+          control->flap_3 = FLAP_3_HOVER_ANGLE*sqrt_cos_table[table_iter];
+          control->flap_4 = FLAP_4_HOVER_ANGLE*sqrt_cos_table[table_iter];
 
-    if(manual>9){
-      float flap_angle = (manual-10)*0.05;
-      control->flap_1 = flap_angle;
-      control->flap_2 = -1*flap_angle;
-      control->flap_3 = flap_angle;
-      control->flap_4 = -1*flap_angle;
+          table_iter = (table_iter+5)%table_size;
+          // control->flap_1 = ext_ctrl_m1;
+        }
+        else{
+          if(state->connectedToOffboard==false){
+            control->flap_1 = ext_ctrl_m1;
+            control->flap_2 = ext_ctrl_m2;
+            control->flap_3 = ext_ctrl_m3;
+            control->flap_4 = ext_ctrl_m4;
+          }
+        }
+        // if(manual==3){
+        //   control->flap_1 = 0.0;
+        //   control->flap_2 = 0.0;
+        //   control->flap_3 = 0.0;
+        //   control->flap_4 = 0.0;
+        // }
+        // if(manual==5){
+
+        //   control->flap_1 =  0.7*sin_table[table_iter];
+        //   control->flap_2 = -0.7*sin_table[table_iter];
+        //   control->flap_3 =  0.7*sin_table[table_iter];
+        //   control->flap_4 = -0.7*sin_table[table_iter];
+
+        //   table_iter = (table_iter+5)%table_size;
+        // }
+        // if(manual==6){
+
+        //   control->flap_1 =  0.7*sin_table[table_iter];
+        //   control->flap_2 = -0.7*sin_table[table_iter];
+        //   control->flap_3 =  0.7*sin_table[table_iter];
+        //   control->flap_4 = -0.7*sin_table[table_iter];
+
+        //   table_iter = (table_iter+8)%table_size;
+        // }
+        // if(manual==7){
+
+        //   control->flap_1 =  0.7*sin_table[table_iter];
+        //   control->flap_2 = -0.7*sin_table[table_iter];
+        //   control->flap_3 =  0.7*sin_table[table_iter];
+        //   control->flap_4 = -0.7*sin_table[table_iter];
+
+        //   table_iter = (table_iter+10)%table_size;
+        // }
+
+        // if(manual>9){
+        //   float flap_angle = (manual-10)*0.05;
+        //   control->flap_1 = flap_angle;
+        //   control->flap_2 = -1*flap_angle;
+        //   control->flap_3 = flap_angle;
+        //   control->flap_4 = -1*flap_angle;
+        // }
+    }
     }
 
 
@@ -506,6 +658,42 @@ PARAM_GROUP_START(extCtrl)
  */
   PARAM_ADD_CORE(PARAM_FLOAT, target_yaw, &target_yaw)
 /**
+ * @brief A parameter to set the target yaw angle
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, target_roll, &target_roll)
+/**
+ * @brief A parameter to set the target yaw angle
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, target_pitch, &target_pitch)
+/**
+ * @brief A parameter to set the P param for roll rate control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, roll_P, &P_vector[F_ERR_ROLL])
+/**
+ * @brief A parameter to set the P param for roll rate control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, roll_rate_P, &P_vector[F_ERR_ARX])
+/**
+ * @brief A parameter to set the I param for roll rate control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, roll_rate_I, &I_vector[F_ERR_ARX])
+/**
+ * @brief A parameter to set the D param for roll rate control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, roll_rate_D, &D_vector[F_ERR_ARX])
+/**
+ * @brief A parameter to set the P param for roll rate control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, pitch_rate_P, &P_vector[F_ERR_ARY])
+/**
+ * @brief A parameter to set the I param for roll rate control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, pitch_rate_I, &I_vector[F_ERR_ARY])
+/**
+ * @brief A parameter to set the D param for roll rate control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, pitch_rate_D, &D_vector[F_ERR_ARY])
+/**
  * @brief The controller output for M1 (in Radian)
  */
   // PARAM_ADD_CORE(PARAM_FLOAT, m1, &ext_ctrl[0])
@@ -527,3 +715,23 @@ PARAM_GROUP_START(extCtrl)
   PARAM_ADD_CORE(PARAM_FLOAT, m4, &ext_ctrl_m4)
 
 PARAM_GROUP_STOP(extCtrl)
+
+/**
+ * Log group for the error
+ */
+LOG_GROUP_START(Error)
+
+/**
+ * @brief Integrated x error
+ */
+LOG_ADD_CORE(LOG_FLOAT, int_x_err, &error_D_d[F_ERR_ARX])
+/**
+ * @brief Integrated y error
+ */
+LOG_ADD_CORE(LOG_FLOAT, int_y_err, &error_D_d[F_ERR_ARY])
+/**
+ * @brief Integrated z error
+ */
+LOG_ADD_CORE(LOG_FLOAT, int_z_err, &error_D_d[F_ERR_ARZ])
+
+LOG_GROUP_STOP(Error)

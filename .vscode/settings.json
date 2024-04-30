@@ -86,7 +86,9 @@
         "sstream": "c",
         "condition_variable": "c",
         "peer_localization.h": "c",
-        "state_est_a_matrix.h": "c"
+        "state_est_a_matrix.h": "c",
+        "err_int_control_matrix.h": "c",
+        "floaty_params.h": "c"
     },
     // "cortex-debug.gdbPath": "gdb-multiarch"
     "cortex-debug.gdbPath": "/usr/local/bin/arm-none-eabi-gdb"

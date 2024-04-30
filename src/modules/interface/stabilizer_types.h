@@ -189,6 +189,7 @@ typedef struct floaty_state_s {
   acc_t acc;                // Gs (but acc.z without considering gravity)
   attitude_t attitudeRate;      // rad/s
   floaty_control_t flaps;   // rad (I guess it is rad)
+  bool connectedToOffboard;
 } floaty_state_t;
 
 typedef struct motors_thrust_s {
@@ -329,6 +330,7 @@ typedef struct
 #define POSITION_RATE RATE_100_HZ
 #define RATE_HL_COMMANDER RATE_100_HZ
 #define SYS_ID_RATE RATE_100_HZ
+// #define SYS_ID_RATE RATE_50_HZ
 #define ESTIMATOR_RATE RATE_100_HZ
 
 #define RATE_DO_EXECUTE(RATE_HZ, TICK) ((TICK % (RATE_MAIN_LOOP / RATE_HZ)) == 0)

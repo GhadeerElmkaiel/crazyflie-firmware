@@ -86,7 +86,13 @@
 
 static uint8_t useOptCalcs = 0;
 
-float flapHoverAng = 0.436;
+// float flapHoverAng = 0.436; // 25 degrees
+float flapHoverAng = 0.349; // 20 degrees
+// float flapHoverAng = 0.305; // 17.5 degrees
+// float flapHoverAng = 0.261; // 15 degrees
+// float flapHoverAng = 0.174; // 10 degrees
+// float flapHoverAng = 0.087; // 5 degrees
+// float flapHoverAng = 0.0; // 0 degrees
 
 float rhoCd_2 = 0.735;
 float dCpValue = 0.065;
@@ -644,6 +650,7 @@ void floatyKalmanCoreScalarUpdateDiagP(floatyKalmanCoreData_t* thi_s, int state_
 
   // ====== UPDATE VELOCITY ======
   K_Scalar_i3 = P_i3/HPHR; // kalman gain for velocity value = (PH' (HPH' + R )^-1)
+  // K_Scalar_i3 = P_i3/(HPHR*5); // Exasurated uncertainty to check quality of prdict step for the velocety
   thi_s->S[state_idx+3] = thi_s->S[state_idx+3] + K_Scalar_i3 * errorForVel; // state update
   thi_s->P[state_idx][state_idx+3] = thi_s->P[state_idx+3][state_idx] = P_i3 - 0.5*(K_Scalar*P_i3 + K_Scalar_i3*P_ii);
   thi_s->P[state_idx+3][state_idx+3] = P_33 - 0.5*(K_Scalar*P_i3 + K_Scalar_i3*P_ii);
@@ -1851,6 +1858,14 @@ void floatyKalmanCoreExternalizeState(const floatyKalmanCoreData_t* thi_s, float
       .flap_3 = thi_s->S[FKC_STATE_F3],
       .flap_4 = thi_s->S[FKC_STATE_F4]
   };
+
+  if(tick-thi_s->lastCommunicationTick < maxTickNoCommunication){
+    state->connectedToOffboard = true;
+  }
+  else{
+    state->connectedToOffboard = false;
+  }
+
 
   // assertStateNotNaN(thi_s);
 }

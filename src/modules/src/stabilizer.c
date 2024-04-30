@@ -75,7 +75,8 @@ static control_t control;
 static floaty_control_t floaty_control;
 static motors_thrust_t motorPower;
 // For scratch storage - never logged or passed to other subsystems.
-static setpoint_t tempSetpoint;
+static setpoint_t gloabalSetpoint;
+static setpoint_t emptySetpoint;
 
 static StateEstimatorType estimatorType;
 static ControllerType controllerType;
@@ -168,6 +169,24 @@ static void compressState()
   stateCompressed.rateYaw = sensorData.gyro.z * deg2millirad;
 }
 
+// static void resetSetpoint(){
+//   gloabalSetpoint.position.x = 0;
+//   gloabalSetpoint.position.y = 0;
+//   gloabalSetpoint.position.z = 0;
+
+//   gloabalSetpoint.velocity.x = 0;
+//   gloabalSetpoint.velocity.y = 0;
+//   gloabalSetpoint.velocity.z = 0;
+
+//   gloabalSetpoint.attitude.roll = 0;
+//   gloabalSetpoint.attitude.pitch = 0;
+//   gloabalSetpoint.attitude.yaw = 0;
+
+//   gloabalSetpoint.attitudeRate.roll = 0;
+//   gloabalSetpoint.attitudeRate.pitch = 0;
+//   gloabalSetpoint.attitudeRate.yaw = 0;
+// }
+
 static void compressSetpoint()
 {
   setpointCompressed.x = setpoint.position.x * 1000.0f;
@@ -201,6 +220,8 @@ void stabilizerInit(StateEstimatorType estimator)
 
   // for initializing additional bin for testing
   additionalBinInit(&BIN_PA7_BRUSHLESS_OD);
+  
+  // resetSetpoint();
 
   isInit = true;
 }
@@ -245,17 +266,6 @@ static void stabilizerTask(void* param)
   systemWaitStart();
 
 
-  // floaty_control.flap_1=0;
-  // floaty_control.flap_2=0;
-  // floaty_control.flap_3=0;
-  // floaty_control.flap_4=0;
-  // powerDistribution(&motorPower, &floaty_control);
-  // motorsSetRatio(MOTOR_M1, motorPower.m1);
-  // motorsSetRatio(MOTOR_M2, motorPower.m2);
-  // motorsSetRatio(MOTOR_M3, motorPower.m3);
-  // motorsSetRatio(MOTOR_M4, motorPower.m4);
-
-
   DEBUG_PRINT("Wait for sensor calibration...\n");
   // Wait for sensors to be calibrated
   lastWakeTime = xTaskGetTickCount();
@@ -297,9 +307,13 @@ static void stabilizerTask(void* param)
       stateEstimator(&floaty_state, tick);
       // compressState();
 
-      if (crtpFloatyCommanderHighLevelGetSetpoint(&tempSetpoint, &state, tick)) {
-        commanderSetSetpoint(&tempSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
+      if (crtpFloatyCommanderHighLevelGetSetpoint(&gloabalSetpoint, &state, tick)) {
+        commanderSetSetpoint(&gloabalSetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
       }
+
+      // if (crtpFloatyCommanderHighLevelGetSetpoint(&emptySetpoint, &state, tick)) {
+      //   commanderSetSetpoint(&emptySetpoint, COMMANDER_PRIORITY_HIGHLEVEL);
+      // }
 
       commanderGetSetpoint(&setpoint, &state);
       // compressSetpoint();
@@ -897,3 +911,64 @@ LOG_GROUP_STOP(stateEstimate)
 //  */
 // LOG_ADD(LOG_INT16, rateYaw, &stateCompressed.rateYaw)
 // LOG_GROUP_STOP(stateEstimateZ)
+
+
+/**
+ * Tuning parameters for the Extended Kalman Filter (EKF)
+ *     estimator
+ */
+PARAM_GROUP_START(setpoint)
+/**
+ * @brief Global setpoint x position
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, setpointX, &gloabalSetpoint.position.x)
+/**
+ * @brief Global setpoint y position
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, setpointY, &gloabalSetpoint.position.y)
+/**
+ * @brief Global setpoint z position
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, setpointZ, &gloabalSetpoint.position.z)
+  
+/**
+ * @brief Global setpoint x velocity
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, setpointVelX, &gloabalSetpoint.velocity.x)
+/**
+ * @brief Global setpoint y velocity
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, setpointVelY, &gloabalSetpoint.velocity.y)
+/**
+ * @brief Global setpoint z velocity
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, setpointVelZ, &gloabalSetpoint.velocity.z)
+  
+/**
+ * @brief Global setpoint roll angle
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, setpointRoll, &gloabalSetpoint.attitude.roll)
+/**
+ * @brief Global setpoint pitch angle
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, setpointPitch, &gloabalSetpoint.attitude.pitch)
+/**
+ * @brief Global setpoint yaw angle
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, setpointYaw, &gloabalSetpoint.attitude.yaw)
+  
+// /**
+//  * @brief Global setpoint roll rate
+//  */
+//   PARAM_ADD_CORE(PARAM_FLOAT, setpointRollRate, &gloabalSetpoint.attitudeRate.roll)
+// /**
+//  * @brief Global setpoint pitch rate
+//  */
+//   PARAM_ADD_CORE(PARAM_FLOAT, setpointPitchRate, &gloabalSetpoint.attitudeRate.pitch)
+// /**
+//  * @brief Global setpoint yaw rate
+//  */
+//   PARAM_ADD_CORE(PARAM_FLOAT, setpointYawRate, &gloabalSetpoint.attitudeRate.yaw)
+
+
+PARAM_GROUP_STOP(setpoint)

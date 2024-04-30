@@ -432,7 +432,8 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
   input.flap_3 = flapsAngles.flap_3;
   input.flap_4 = flapsAngles.flap_4;
 
-  if(floatyIsFlying && floatyControllerRunning){
+  // if(floatyIsFlying && floatyControllerRunning){
+  if(floatyIsFlying){
     floatyKalmanCorePredict(&floatyCoreData, &input, dt, &coreParams);
   }
 
@@ -470,6 +471,8 @@ static bool updateFloatyQueuedMeasurements(const uint32_t tick) {
         doneUpdate = true;
         break;
       case MeasurementTypePose:
+        // update the last communication tick to the current one
+        floatyCoreData.lastCommunicationTick=tick;
         floatyKalmanCoreUpdateWithPose(&floatyCoreData, &m.data.pose);
         // kalmanCoreUpdateWithPose(&coreData, &m.data.pose);        
         doneUpdate = true;

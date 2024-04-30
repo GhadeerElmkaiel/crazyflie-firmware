@@ -64,6 +64,9 @@
 #define measurementQuatNoiseStd 0.007
 #define measurementGyroNoiseStd 0.06   // 0.1*_PI/180*2;
 
+// The maximum allowed number of tickes without having a communication with the offboard system
+#define maxTickNoCommunication 500 
+
 #define linearized_state_estimation_matrix true
 
 typedef enum
@@ -114,6 +117,8 @@ typedef struct {
 
   // Quaternion used for initial orientation [w,x,y,z]
   float initialQuaternion[4];
+  // A variable for tracking the time of last communication with the offboard system
+  uint32_t lastCommunicationTick;
 } floatyKalmanCoreData_t;
 
 // The parameters used by the filter

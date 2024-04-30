@@ -39,8 +39,8 @@
 
 /* Number of times in a row we need to see a condition before acting upon it */
 #define SUPERVISOR_HYSTERESIS_THRESHOLD 30
-#define SUPERVISOR_VIBRATION_THRESHOLD 50
-#define SUPERVISOR_STABLE_THRESHOLD 80
+#define SUPERVISOR_VIBRATION_THRESHOLD 100
+#define SUPERVISOR_STABLE_THRESHOLD 100
 
 static bool canFly;
 static bool isFlying;
@@ -77,8 +77,8 @@ void supervisorControllerStateUpdate(bool running)
 bool RobotVibratingCheck(const sensorData_t *data)
 {
 
-  const float gyro_tolerance = 0.8;
-  const float gyro_stable_tolerance = 0.3;
+  const float gyro_tolerance = 0.2;
+  const float gyro_stable_tolerance = 0.1;
   static uint32_t hysteresis_vibration = 0;
   static uint32_t hysteresis_no_vibration = 0;
   static bool vibration_detected = false;
@@ -185,7 +185,8 @@ static bool isTumbledCheck(const sensorData_t *data)
 void supervisorUpdate(const sensorData_t *data)
 {
   isRobotVibrating = RobotVibratingCheck(data);
-  isFlying = isFlyingCheck();
+  // isFlying = isFlyingCheck();
+  isFlying = isRobotVibrating;
 
   isTumbled = isTumbledCheck(data);
   if (isTumbled && isFlying) {
