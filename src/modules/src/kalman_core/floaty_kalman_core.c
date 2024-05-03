@@ -87,9 +87,10 @@
 static uint8_t useOptCalcs = 0;
 
 // float flapHoverAng = 0.436; // 25 degrees
-float flapHoverAng = 0.349; // 20 degrees
-// float flapHoverAng = 0.305; // 17.5 degrees
+// float flapHoverAng = 0.349; // 20 degrees
+float flapHoverAng = 0.305; // 17.5 degrees
 // float flapHoverAng = 0.261; // 15 degrees
+// float flapHoverAng = 0.217; // 12.5 degrees
 // float flapHoverAng = 0.174; // 10 degrees
 // float flapHoverAng = 0.087; // 5 degrees
 // float flapHoverAng = 0.0; // 0 degrees
@@ -821,26 +822,9 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
           A[FKC_STATE_PX][j] = State_Est_j_element;
         }
 
-        // float DxxN = cos_y*cos_y*Dx + sin_y*sin_y*Dy;
-        // float DxyN = cos_y*sin_y*Dx - sin_y*cos_y*Dy;
-        // float GxxN = -sin_y*Gy;
-        // float GxyN = cos_y*Gx;
-
-        // sum = DxxN*thi_s->S[FKC_STATE_PX] + DxyN*thi_s->S[FKC_STATE_PY] + GxxN*thi_s->S[FKC_STATE_ARX] + GxyN*thi_s->S[FKC_STATE_ARY];
-        // A[FKC_STATE_PX][FKC_STATE_PX] = DxxN;
-        // A[FKC_STATE_PX][FKC_STATE_PY] = DxyN;
-        // A[FKC_STATE_PX][FKC_STATE_QX] = GxxN;
-        // A[FKC_STATE_PX][FKC_STATE_QY] = GxyN;
-
       }
       else if (i==FKC_STATE_PY)
       {
-        // for(int j=0; j<FKC_STATE_DIM; j++){
-        //   float State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][j]*sin_y + State_Est_A_matrix[FKC_STATE_PY][j]*cos_y;
-        //   sum+= State_Est_j_element*thi_s->S[j];
-        //   A[FKC_STATE_PY][j] = State_Est_j_element;
-        // }
-
         for(int j=0; j<FKC_STATE_DIM; j++){
           float State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][j]*sin_y + State_Est_A_matrix[FKC_STATE_PY][j]*cos_y;
           if(j==FKC_STATE_PX){
@@ -856,16 +840,6 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
           A[FKC_STATE_PY][j] = State_Est_j_element;
         }
 
-        // float DyxN = cos_y*sin_y*Dx - sin_y*cos_y*Dy;
-        // float DyyN = sin_y*sin_y*Dx + cos_y*cos_y*Dy;
-        // float GyxN = cos_y*Gy;
-        // float GyyN = sin_y*Gx;
-        
-        // sum = DyxN*thi_s->S[FKC_STATE_PX] + DyyN*thi_s->S[FKC_STATE_PY] + GyxN*thi_s->S[FKC_STATE_ARX] + GyyN*thi_s->S[FKC_STATE_ARY];
-        // A[FKC_STATE_PY][FKC_STATE_PX] = DyxN;
-        // A[FKC_STATE_PY][FKC_STATE_PY] = DyyN;
-        // A[FKC_STATE_PY][FKC_STATE_QX] = GyxN;
-        // A[FKC_STATE_PY][FKC_STATE_QY] = GyyN;
 
       }
       else if (i==FKC_STATE_ARX || i==FKC_STATE_ARY)

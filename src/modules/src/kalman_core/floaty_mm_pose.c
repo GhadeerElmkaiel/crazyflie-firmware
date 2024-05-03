@@ -100,7 +100,8 @@ void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasureme
 
       // I use different errors for velocity as the other error has delay compensation which is affecting the velocity updates
       // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value - thi_s->S[FKC_STATE_X+i], pose->pos[i] - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
-      floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value - thi_s->S[FKC_STATE_X+i], value - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
+      // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value - thi_s->S[FKC_STATE_X+i], value - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
+      floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value_2 - thi_s->S[FKC_STATE_X+i], value_2 - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
 
       // For the velocity, we use higher delay compensation
       // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value - thi_s->S[FKC_STATE_X+i], value_2 - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);

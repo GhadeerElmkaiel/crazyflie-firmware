@@ -60,7 +60,7 @@
 #include "stabilizer_types.h"
 #include "kalman_core.h"
 
-#define measurementPosNoiseStd 0.01
+#define measurementPosNoiseStd 0.005
 #define measurementQuatNoiseStd 0.007
 #define measurementGyroNoiseStd 0.06   // 0.1*_PI/180*2;
 

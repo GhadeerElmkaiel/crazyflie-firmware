@@ -57,6 +57,7 @@
 #include "static_mem.h"
 #include "rateSupervisor.h"
 
+#include "floaty_params.h"
 
 static bool isInit;
 static bool emergencyStop = false;
@@ -169,23 +170,29 @@ static void compressState()
   stateCompressed.rateYaw = sensorData.gyro.z * deg2millirad;
 }
 
-// static void resetSetpoint(){
-//   gloabalSetpoint.position.x = 0;
-//   gloabalSetpoint.position.y = 0;
-//   gloabalSetpoint.position.z = 0;
+static void resetSetpoint(){
+  setpoint.position.x = 0;
+  setpoint.position.y = 0;
+  setpoint.position.z = 0;
 
-//   gloabalSetpoint.velocity.x = 0;
-//   gloabalSetpoint.velocity.y = 0;
-//   gloabalSetpoint.velocity.z = 0;
+  setpoint.velocity.x = 0;
+  setpoint.velocity.y = 0;
+  setpoint.velocity.z = 0;
 
-//   gloabalSetpoint.attitude.roll = 0;
-//   gloabalSetpoint.attitude.pitch = 0;
-//   gloabalSetpoint.attitude.yaw = 0;
+  setpoint.attitude.roll = 0;
+  setpoint.attitude.pitch = 0;
+  setpoint.attitude.yaw = 0;
 
-//   gloabalSetpoint.attitudeRate.roll = 0;
-//   gloabalSetpoint.attitudeRate.pitch = 0;
-//   gloabalSetpoint.attitudeRate.yaw = 0;
-// }
+  setpoint.attitudeRate.roll = 0;
+  setpoint.attitudeRate.pitch = 0;
+  setpoint.attitudeRate.yaw = 0;
+
+  setpoint.flaps.flap_1 = FLAP_1_HOVER_ANGLE;
+  setpoint.flaps.flap_2 = FLAP_2_HOVER_ANGLE;
+  setpoint.flaps.flap_3 = FLAP_3_HOVER_ANGLE;
+  setpoint.flaps.flap_4 = FLAP_4_HOVER_ANGLE;
+
+}
 
 static void compressSetpoint()
 {
@@ -221,7 +228,7 @@ void stabilizerInit(StateEstimatorType estimator)
   // for initializing additional bin for testing
   additionalBinInit(&BIN_PA7_BRUSHLESS_OD);
   
-  // resetSetpoint();
+  resetSetpoint();
 
   isInit = true;
 }

@@ -26,6 +26,7 @@
 
 #  define START_LOOP_CONTROL 2
 #  define CONTROL_TYPE 1
+
 // #  define PWM_MID_VALUE 32767
 // #  define MAX_PWM_SIGNAL 65535
 // #  define MIN_ANG -0.7  // Almost equal to -40 degres
@@ -34,6 +35,13 @@
 
 
 float control_dt = 1.0/SYS_ID_RATE;
+float cos_signal_rate = SYS_ID_RATE/table_size;
+int iter_step;
+
+// Variables for switching configuration
+int ticks_per_phase;
+int phase_num;
+
 // bool loop_was_on = false;
 // uint32_t shift_in_tick = 0;
 
@@ -52,10 +60,10 @@ static int table_iter = 0;
 static float ctrl_output_log[] = {0, 0, 0, 0};
 static float ctrl_motor_log[] = {0, 0, 0, 0};
 // static float ext_ctrl[] = {0, 0, 0, 0};
-static float ext_ctrl_m1 =  0.3;
-static float ext_ctrl_m2 = -0.3;
-static float ext_ctrl_m3 =  0.3;
-static float ext_ctrl_m4 = -0.3;
+static float ext_ctrl_m1 =  0.15;
+static float ext_ctrl_m2 = -0.15;
+static float ext_ctrl_m3 =  0.15;
+static float ext_ctrl_m4 = -0.15;
 
 static float target_yaw = 0.0;
 static float target_roll = 0.0;
@@ -76,7 +84,9 @@ NO_DMA_CCM_SAFE_ZERO_INIT static float error_PID_d[F_ERR_DIM];
 // static float z_err_int = 0.0;
 
 // bool use_I_ctrl = false;
-bool test_rate_PID = true;
+const bool test_rate_PID = true;
+// const bool switching_conf = true;
+const bool switching_conf = false;
 
 static uint8_t manual = 1;
 
@@ -106,8 +116,10 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
                                          const uint32_t tick)
 {
 
-
   if (RATE_DO_EXECUTE(SYS_ID_RATE, tick)) {
+    ticks_per_phase = (int)RATE_MAIN_LOOP/(SWITCHING_RATE);
+    phase_num = (int)tick/ticks_per_phase;
+    table_iter = (int)(SWITCHING_RATE*tick*SYS_ID_RATE/RATE_MAIN_LOOP)%table_size;
 
     static __attribute__((aligned(4))) arm_matrix_instance_f32 Km = { 4, F_ERR_DIM, (float *)K_matrix};
 
@@ -137,32 +149,75 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     // floatyControlDelayCompensation(coreData, input_b_last, dt);
     // floatyControlDelayCompensation(coreData, input_last, dt);
 
+    if(switching_conf){
+      if(phase_num%2==0){
+        
+        error_m[F_ERR_X] = setpoint->position.x - state->position.x;
+        error_m[F_ERR_Y] = setpoint->position.y - state->position.y;
 
-    // // ------------ NO DELAY COMPENSTAION ------------
-    // Update error NO DELAY COMPENSTAION
-    error_m[F_ERR_X] = setpoint->position.x - state->position.x;
-    error_m[F_ERR_Y] = setpoint->position.y - state->position.y;
-    error_m[F_ERR_Z] = setpoint->position.z - state->position.z;
+        error_m[F_ERR_PX] = setpoint->velocity.x - state->velocity.x;
+        error_m[F_ERR_PY] = setpoint->velocity.y - state->velocity.y;
 
-    error_m[F_ERR_PX] = setpoint->velocity.x - state->velocity.x;
-    error_m[F_ERR_PY] = setpoint->velocity.y - state->velocity.y;
-    error_m[F_ERR_PZ] = setpoint->velocity.z - state->velocity.z;
+        error_m[F_ERR_ROLL] = setpoint->attitude.roll - state->attitude.roll;
+        error_m[F_ERR_PITCH] = setpoint->attitude.pitch - state->attitude.pitch;
 
-    error_m[F_ERR_ROLL] = setpoint->attitude.roll - state->attitude.roll;
-    error_m[F_ERR_PITCH] = setpoint->attitude.pitch - state->attitude.pitch;
-    error_m[F_ERR_YAW] = setpoint->attitude.yaw - state->attitude.yaw;
+        error_m[F_ERR_ARX] = setpoint->attitudeRate.roll - state->attitudeRate.roll;
+        error_m[F_ERR_ARY] = setpoint->attitudeRate.pitch - state->attitudeRate.pitch;
+      }
+      else{
+        
+        error_m[F_ERR_Y] = -(setpoint->position.x - state->position.x);
+        error_m[F_ERR_X] = setpoint->position.y - state->position.y;
 
-    error_m[F_ERR_ARX] = setpoint->attitudeRate.roll - state->attitudeRate.roll;
-    error_m[F_ERR_ARY] = setpoint->attitudeRate.pitch - state->attitudeRate.pitch;
-    error_m[F_ERR_ARZ] = setpoint->attitudeRate.yaw - state->attitudeRate.yaw;
+        error_m[F_ERR_PY] = -(setpoint->velocity.x - state->velocity.x);
+        error_m[F_ERR_PX] = setpoint->velocity.y - state->velocity.y;
 
-    error_m[F_ERR_F1] = setpoint->flaps.flap_1 - state->flaps.flap_1;
-    error_m[F_ERR_F2] = setpoint->flaps.flap_2 - state->flaps.flap_2;
-    error_m[F_ERR_F3] = setpoint->flaps.flap_3 - state->flaps.flap_3;
-    error_m[F_ERR_F4] = setpoint->flaps.flap_4 - state->flaps.flap_4;
+        error_m[F_ERR_PITCH] = -(setpoint->attitude.roll - state->attitude.roll);
+        error_m[F_ERR_ROLL] = setpoint->attitude.pitch - state->attitude.pitch;
+
+        error_m[F_ERR_ARY] = -(setpoint->attitudeRate.roll - state->attitudeRate.roll);
+        error_m[F_ERR_ARX] = setpoint->attitudeRate.pitch - state->attitudeRate.pitch;
+      }
+
+
+      error_m[F_ERR_Z] = setpoint->position.z - state->position.z;
+      error_m[F_ERR_PZ] = setpoint->velocity.z - state->velocity.z;
+
+      error_m[F_ERR_YAW] = setpoint->attitude.yaw - state->attitude.yaw;
+      error_m[F_ERR_ARZ] = setpoint->attitudeRate.yaw - state->attitudeRate.yaw;
+
+      error_m[F_ERR_F1] = setpoint->flaps.flap_1 - state->flaps.flap_1;
+      error_m[F_ERR_F2] = setpoint->flaps.flap_2 - state->flaps.flap_2;
+      error_m[F_ERR_F3] = setpoint->flaps.flap_3 - state->flaps.flap_3;
+      error_m[F_ERR_F4] = setpoint->flaps.flap_4 - state->flaps.flap_4;
+
+    }
+    else{
+      // // ------------ NO DELAY COMPENSTAION ------------
+      // Update error NO DELAY COMPENSTAION
+      error_m[F_ERR_X] = setpoint->position.x - state->position.x;
+      error_m[F_ERR_Y] = setpoint->position.y - state->position.y;
+      error_m[F_ERR_Z] = setpoint->position.z - state->position.z;
+
+      error_m[F_ERR_PX] = setpoint->velocity.x - state->velocity.x;
+      error_m[F_ERR_PY] = setpoint->velocity.y - state->velocity.y;
+      error_m[F_ERR_PZ] = setpoint->velocity.z - state->velocity.z;
+
+      error_m[F_ERR_ROLL] = setpoint->attitude.roll - state->attitude.roll;
+      error_m[F_ERR_PITCH] = setpoint->attitude.pitch - state->attitude.pitch;
+      error_m[F_ERR_YAW] = setpoint->attitude.yaw - state->attitude.yaw;
+
+      error_m[F_ERR_ARX] = setpoint->attitudeRate.roll - state->attitudeRate.roll;
+      error_m[F_ERR_ARY] = setpoint->attitudeRate.pitch - state->attitudeRate.pitch;
+      error_m[F_ERR_ARZ] = setpoint->attitudeRate.yaw - state->attitudeRate.yaw;
+
+      error_m[F_ERR_F1] = setpoint->flaps.flap_1 - state->flaps.flap_1;
+      error_m[F_ERR_F2] = setpoint->flaps.flap_2 - state->flaps.flap_2;
+      error_m[F_ERR_F3] = setpoint->flaps.flap_3 - state->flaps.flap_3;
+      error_m[F_ERR_F4] = setpoint->flaps.flap_4 - state->flaps.flap_4;
+    }
 
     float yaw = state->attitude.yaw;
-
 
     // // ------------ DELAY COMPENSTAION ------------
     // // Update error WITH DELAY COMPENSTAION
@@ -304,6 +359,15 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       compined_PID_d[2] = error_PID_d[2] + error_PID_d[5];
       compined_PID_d[3] = error_PID_d[8] + error_PID_d[11];
 
+      if(compined_PID_d[2]>flapHoverAng){
+        compined_PID_d[2]=flapHoverAng;
+      }
+
+      // compined_PID_d[0] = 0;
+      // compined_PID_d[1] = 0;
+      // compined_PID_d[2] = 0;
+      // compined_PID_d[3] = 0;
+
       // Multiply the u matrix by the compined PID to generate the control matrix
       mat_mult(&tmpNN4m, &tmpNN3m, &tmpNN1m);
     }
@@ -341,10 +405,28 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     }
     else{
       // Add the hovering angles to the control results
-      control->flap_1 = control_m[0] + setpoint->flaps.flap_1;
-      control->flap_2 = control_m[1] + setpoint->flaps.flap_2;
-      control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
-      control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
+      if(switching_conf){
+        // Normal configuration
+        if(phase_num%2==0){
+          control->flap_1 = control_m[0] + setpoint->flaps.flap_1*square_table[table_iter];
+          control->flap_2 = control_m[1] + setpoint->flaps.flap_2*square_table[table_iter];
+          control->flap_3 = control_m[2] + setpoint->flaps.flap_3*square_table[table_iter];
+          control->flap_4 = control_m[3] + setpoint->flaps.flap_4*square_table[table_iter];
+        }
+        // Reversed configuration
+        else{
+          control->flap_1 = control_m[3] + setpoint->flaps.flap_1*square_table[table_iter];
+          control->flap_2 = control_m[0] + setpoint->flaps.flap_2*square_table[table_iter];
+          control->flap_3 = control_m[1] + setpoint->flaps.flap_3*square_table[table_iter];
+          control->flap_4 = control_m[2] + setpoint->flaps.flap_4*square_table[table_iter];
+        }
+      }
+      else{
+        control->flap_1 = control_m[0] + setpoint->flaps.flap_1;
+        control->flap_2 = control_m[1] + setpoint->flaps.flap_2;
+        control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
+        control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
+      }
 
       // // Integrate error
       // pos_error_I[0] += error_m[F_ERR_X]*control_dt;
@@ -370,13 +452,13 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       else{
 
         if(manual==4){
+          // iter_step = (int)SWITCHING_RATE/(cos_signal_rate*2);
 
-          control->flap_1 = FLAP_1_HOVER_ANGLE*sqrt_cos_table[table_iter];
-          control->flap_2 = FLAP_2_HOVER_ANGLE*sqrt_cos_table[table_iter];
-          control->flap_3 = FLAP_3_HOVER_ANGLE*sqrt_cos_table[table_iter];
-          control->flap_4 = FLAP_4_HOVER_ANGLE*sqrt_cos_table[table_iter];
+          control->flap_1 = FLAP_1_HOVER_ANGLE*square_table[table_iter];
+          control->flap_2 = FLAP_2_HOVER_ANGLE*square_table[table_iter];
+          control->flap_3 = FLAP_3_HOVER_ANGLE*square_table[table_iter];
+          control->flap_4 = FLAP_4_HOVER_ANGLE*square_table[table_iter];
 
-          table_iter = (table_iter+5)%table_size;
           // control->flap_1 = ext_ctrl_m1;
         }
         else{
@@ -496,6 +578,8 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     input_last->flap_2 = control->flap_2;
     input_last->flap_3 = control->flap_3;
     input_last->flap_4 = control->flap_4;
+
+    // table_iter = (table_iter+iter_step)%table_size;
 
   }
   
@@ -666,6 +750,30 @@ PARAM_GROUP_START(extCtrl)
  */
   PARAM_ADD_CORE(PARAM_FLOAT, target_pitch, &target_pitch)
 /**
+ * @brief A parameter to set the P param for X control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, x_P, &P_vector[F_ERR_X])
+/**
+ * @brief A parameter to set the P param for Y control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, y_P, &P_vector[F_ERR_Y])
+/**
+ * @brief A parameter to set the P param for Z control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, z_P, &P_vector[F_ERR_Z])
+/**
+ * @brief A parameter to set the P param for X control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, vx_P, &P_vector[F_ERR_PX])
+/**
+ * @brief A parameter to set the P param for Y control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, vy_P, &P_vector[F_ERR_PY])
+/**
+ * @brief A parameter to set the P param for Z control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, vz_P, &P_vector[F_ERR_PZ])
+/**
  * @brief A parameter to set the P param for roll rate control
  */
   PARAM_ADD_CORE(PARAM_FLOAT, roll_P, &P_vector[F_ERR_ROLL])
@@ -674,25 +782,9 @@ PARAM_GROUP_START(extCtrl)
  */
   PARAM_ADD_CORE(PARAM_FLOAT, roll_rate_P, &P_vector[F_ERR_ARX])
 /**
- * @brief A parameter to set the I param for roll rate control
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, roll_rate_I, &I_vector[F_ERR_ARX])
-/**
- * @brief A parameter to set the D param for roll rate control
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, roll_rate_D, &D_vector[F_ERR_ARX])
-/**
  * @brief A parameter to set the P param for roll rate control
  */
   PARAM_ADD_CORE(PARAM_FLOAT, pitch_rate_P, &P_vector[F_ERR_ARY])
-/**
- * @brief A parameter to set the I param for roll rate control
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, pitch_rate_I, &I_vector[F_ERR_ARY])
-/**
- * @brief A parameter to set the D param for roll rate control
- */
-  PARAM_ADD_CORE(PARAM_FLOAT, pitch_rate_D, &D_vector[F_ERR_ARY])
 /**
  * @brief The controller output for M1 (in Radian)
  */

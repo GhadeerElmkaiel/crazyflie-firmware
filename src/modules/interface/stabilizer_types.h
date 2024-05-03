@@ -330,6 +330,8 @@ typedef struct
 #define POSITION_RATE RATE_100_HZ
 #define RATE_HL_COMMANDER RATE_100_HZ
 #define SYS_ID_RATE RATE_100_HZ
+// How many times does the configuration switches per second
+#define SWITCHING_RATE 2
 // #define SYS_ID_RATE RATE_50_HZ
 #define ESTIMATOR_RATE RATE_100_HZ
 
