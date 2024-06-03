@@ -331,9 +331,10 @@ typedef struct
 #define RATE_HL_COMMANDER RATE_100_HZ
 #define SYS_ID_RATE RATE_100_HZ
 // How many times does the configuration switches per second
-#define SWITCHING_RATE 2
+#define SWITCHING_RATE 1
 // #define SYS_ID_RATE RATE_50_HZ
 #define ESTIMATOR_RATE RATE_100_HZ
+#define OPTITRACK_RATE RATE_50_HZ
 
 #define RATE_DO_EXECUTE(RATE_HZ, TICK) ((TICK % (RATE_MAIN_LOOP / RATE_HZ)) == 0)
 

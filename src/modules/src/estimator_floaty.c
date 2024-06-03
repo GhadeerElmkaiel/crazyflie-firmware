@@ -370,18 +370,18 @@ static bool predictFloatyStateForward(uint32_t osTick, float dt) {
   gyroAverage.y = gyroAccumulator.y * DEG_TO_RAD / gyroAccumulatorCount;
   gyroAverage.z = gyroAccumulator.z * DEG_TO_RAD / gyroAccumulatorCount;
 
-  gyroAverageRotated.x = 0.7071*(gyroAverage.x+gyroAverage.y);
-  gyroAverageRotated.y = 0.7071*(gyroAverage.y-gyroAverage.x);
+  gyroAverageRotated.x = 0.7071f*(gyroAverage.x+gyroAverage.y);
+  gyroAverageRotated.y = 0.7071f*(gyroAverage.y-gyroAverage.x);
   gyroAverageRotated.z = gyroAverage.z;
 
   gyroAverageExt.x = gyroAverageRotated.x;
   gyroAverageExt.y = gyroAverageRotated.y;
   gyroAverageExt.z = gyroAverageRotated.z;
   // accelerometer is in Gs but the estimator requires ms^-2
-  Axis3f accAverage;
-  accAverage.x = accAccumulator.x * GRAVITY_MAGNITUDE / accAccumulatorCount;
-  accAverage.y = accAccumulator.y * GRAVITY_MAGNITUDE / accAccumulatorCount;
-  accAverage.z = accAccumulator.z * GRAVITY_MAGNITUDE / accAccumulatorCount;
+  // Axis3f accAverage;
+  // accAverage.x = accAccumulator.x * GRAVITY_MAGNITUDE / accAccumulatorCount;
+  // accAverage.y = accAccumulator.y * GRAVITY_MAGNITUDE / accAccumulatorCount;
+  // accAverage.z = accAccumulator.z * GRAVITY_MAGNITUDE / accAccumulatorCount;
 
   // -------------------------------
   // Filtering with IIR filter
@@ -813,3 +813,37 @@ PARAM_GROUP_STOP(FloatyKalm)
 //   PARAM_ADD_CORE(PARAM_FLOAT, initialYaw, &coreParams.initialYaw)
 // PARAM_GROUP_STOP(kalman)
 
+
+
+/**
+ * LOG uncertainty values
+ */
+LOG_GROUP_START(Uncertainty)
+/**
+ * @brief Uncertainty for x position
+ */
+  LOG_ADD(LOG_FLOAT, P_x_x, &floatyCoreData.P[FKC_STATE_X][FKC_STATE_X])
+/**
+ * @brief Uncertainty covar for x position x velocity
+ */
+  LOG_ADD(LOG_FLOAT, P_x_vx, &floatyCoreData.P[FKC_STATE_X][FKC_STATE_PX])
+/**
+ * @brief Uncertainty covar for x position x velocity
+ */
+  LOG_ADD(LOG_FLOAT, P_vx_vx, &floatyCoreData.P[FKC_STATE_PX][FKC_STATE_PX])
+
+/**
+ * @brief Uncertainty for gyro x y
+ */
+  LOG_ADD(LOG_FLOAT, P_gx_gy, &floatyCoreData.P[FKC_STATE_ARX][FKC_STATE_ARY])
+/**
+ * @brief Uncertainty for gyro x z
+ */
+  LOG_ADD(LOG_FLOAT, P_gx_gz, &floatyCoreData.P[FKC_STATE_ARX][FKC_STATE_ARZ])
+/**
+ * @brief Uncertainty for gyro y z
+ */
+  LOG_ADD(LOG_FLOAT, P_gy_gz, &floatyCoreData.P[FKC_STATE_ARY][FKC_STATE_ARZ])
+
+
+LOG_GROUP_STOP(Uncertainty)

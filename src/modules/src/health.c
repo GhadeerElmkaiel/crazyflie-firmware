@@ -207,11 +207,11 @@ void healthRunTests(sensorData_t *sensors)
 
     if (i == 1 && healthTestSettings->onPeriodMsec > 0)
     {
-      motorsSetRatio(motorToTest, propTestPWMRatio > 0 ? propTestPWMRatio : healthTestSettings->onPeriodPWMRatio);
+      // motorsSetRatio(motorToTest, propTestPWMRatio > 0 ? propTestPWMRatio : healthTestSettings->onPeriodPWMRatio);
     }
     else if (i == healthTestSettings->onPeriodMsec)
     {
-      motorsSetRatio(motorToTest, 0);
+      // motorsSetRatio(motorToTest, 0);
     }
     else if (i >= healthTestSettings->onPeriodMsec + healthTestSettings->offPeriodMsec)
     {
@@ -234,13 +234,13 @@ void healthRunTests(sensorData_t *sensors)
       batteryPass = 0;
       minLoadedVoltage = idleVoltage = pmGetBatteryVoltage();
     }
-    if (i == 1)
-    {
-      motorsSetRatio(MOTOR_M1, 0xFFFF);
-      motorsSetRatio(MOTOR_M2, 0xFFFF);
-      motorsSetRatio(MOTOR_M3, 0xFFFF);
-      motorsSetRatio(MOTOR_M4, 0xFFFF);
-    }
+    // if (i == 1)
+    // {
+    //   motorsSetRatio(MOTOR_M1, 0xFFFF);
+    //   motorsSetRatio(MOTOR_M2, 0xFFFF);
+    //   motorsSetRatio(MOTOR_M3, 0xFFFF);
+    //   motorsSetRatio(MOTOR_M4, 0xFFFF);
+    // }
     else if (i < 50)
     {
       if (pmGetBatteryVoltage() < minLoadedVoltage)

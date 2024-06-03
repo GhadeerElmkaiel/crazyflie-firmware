@@ -43,6 +43,7 @@ static quaternion_t bef_2_prev_quat_deriv;
 static bool first_time = true;
 
 static uint8_t use_delay_comp = 1;
+// static uint8_t use_delay_comp = 0;
 
 void calcQuatDerivatives(quaternion_t quat, float omega[3], quaternion_t* quat_deriv)
 {
@@ -89,22 +90,34 @@ void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasureme
   
   // h[FKC_STATE_Q3] = 0;
 
-  float dt=0.002;
-  float value;
+  float dt = 1.0f/OPTITRACK_RATE;
+  // float dt = 0.002;
+  float value_1;
+  float value_0_5;
   float value_2;
+  float value_1_5;
+  float value_3;
   for (int i=0; i<3; i++) {
     // h[FKC_STATE_X+i] = 1;
     if(use_delay_comp==1){
-      value_2 = pose->pos[i] +dt*(prev_vel[i]+bef_prev_vel[i]+bef_2_prev_vel[i]);
-      value = pose->pos[i] +dt*(prev_vel[i]+bef_prev_vel[i]);
+      // value_3 = pose->pos[i] +dt*(prev_vel[i]+bef_prev_vel[i]+bef_2_prev_vel[i]);
+      // value_2 = pose->pos[i] +dt*(prev_vel[i]+bef_prev_vel[i]);
+      // value_1_5 = pose->pos[i] +dt*(prev_vel[i]+0.5*bef_prev_vel[i]);
+      value_1 = pose->pos[i] +dt*(prev_vel[i]);
+      value_0_5 = pose->pos[i] +0.2f*dt*(prev_vel[i]);
 
       // I use different errors for velocity as the other error has delay compensation which is affecting the velocity updates
-      // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value - thi_s->S[FKC_STATE_X+i], pose->pos[i] - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
-      // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value - thi_s->S[FKC_STATE_X+i], value - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
-      floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value_2 - thi_s->S[FKC_STATE_X+i], value_2 - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
+      // %%%%%%%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%%%
+      // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value_0_5 - thi_s->S[FKC_STATE_X+i], (value_0_5 - thi_s->S[FKC_STATE_X+i])/dt, measurementPosNoiseStd);
+      floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value_0_5 - thi_s->S[FKC_STATE_X+i], value_0_5 - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
+      // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value_1 - thi_s->S[FKC_STATE_X+i], value_1 - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
+      // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value_1_5 - thi_s->S[FKC_STATE_X+i], value_1_5 - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
+      // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value_2 - thi_s->S[FKC_STATE_X+i], pose->pos[i] - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
+      // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value_2 - thi_s->S[FKC_STATE_X+i], value_2 - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
+      // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value_3 - thi_s->S[FKC_STATE_X+i], value_3 - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
 
       // For the velocity, we use higher delay compensation
-      // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value - thi_s->S[FKC_STATE_X+i], value_2 - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
+      // floatyKalmanCoreScalarUpdateDiagP(thi_s, i, value_2 - thi_s->S[FKC_STATE_X+i], value_3 - thi_s->S[FKC_STATE_X+i], measurementPosNoiseStd);
 
       bef_2_prev_vel[i] = bef_prev_vel[i];        // update the velocity three timesteps back
       bef_prev_vel[i] = prev_vel[i];              // Update the velocity two steps ago to become the last velocity
@@ -146,31 +159,35 @@ void floatyKalmanCoreUpdateWithPose(floatyKalmanCoreData_t* thi_s, poseMeasureme
   if(use_delay_comp==1)
   {
     h[FKC_STATE_QW] = 1;
+    floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.w + 0.5f*dt*(prev_quat_deriv.w) - thi_s->S[FKC_STATE_QW], measurementQuatNoiseStd, FKC_STATE_QW);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.w + dt*(prev_quat_deriv.w) - thi_s->S[FKC_STATE_QW], measurementQuatNoiseStd, FKC_STATE_QW);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.w + dt*(prev_quat_deriv.w+bef_prev_quat_deriv.w) - thi_s->S[FKC_STATE_QW], measurementQuatNoiseStd, FKC_STATE_QW);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.w + dt*(0.5*prev_quat_deriv.w+bef_prev_quat_deriv.w) - thi_s->S[FKC_STATE_QW], measurementQuatNoiseStd, FKC_STATE_QW);
-    floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.w + dt*(prev_quat_deriv.w+bef_prev_quat_deriv.w + bef_2_prev_quat_deriv.w) - thi_s->S[FKC_STATE_QW], measurementQuatNoiseStd, FKC_STATE_QW);
+    // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.w + dt*(prev_quat_deriv.w+bef_prev_quat_deriv.w + bef_2_prev_quat_deriv.w) - thi_s->S[FKC_STATE_QW], measurementQuatNoiseStd, FKC_STATE_QW);
 
     h[FKC_STATE_QW] = 0;
     h[FKC_STATE_QX] = 1;
+    floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.x + 0.5f*dt*(prev_quat_deriv.x) - thi_s->S[FKC_STATE_QX], measurementQuatNoiseStd, FKC_STATE_QX);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.x + dt*(prev_quat_deriv.x) - thi_s->S[FKC_STATE_QX], measurementQuatNoiseStd, FKC_STATE_QX);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.x + dt*(prev_quat_deriv.x+bef_prev_quat_deriv.x) - thi_s->S[FKC_STATE_QX], measurementQuatNoiseStd, FKC_STATE_QX);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.x + dt*(0.5*prev_quat_deriv.x+bef_prev_quat_deriv.x) - thi_s->S[FKC_STATE_QX], measurementQuatNoiseStd, FKC_STATE_QX);
-    floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.x + dt*(prev_quat_deriv.x+bef_prev_quat_deriv.x + bef_2_prev_quat_deriv.x) - thi_s->S[FKC_STATE_QX], measurementQuatNoiseStd, FKC_STATE_QX);
+    // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.x + dt*(prev_quat_deriv.x+bef_prev_quat_deriv.x + bef_2_prev_quat_deriv.x) - thi_s->S[FKC_STATE_QX], measurementQuatNoiseStd, FKC_STATE_QX);
 
     h[FKC_STATE_QX] = 0;
     h[FKC_STATE_QY] = 1;
+    floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.y + 0.5f*dt*(prev_quat_deriv.y) - thi_s->S[FKC_STATE_QY], measurementQuatNoiseStd, FKC_STATE_QY);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.y + dt*(prev_quat_deriv.y) - thi_s->S[FKC_STATE_QY], measurementQuatNoiseStd, FKC_STATE_QY);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.y + dt*(prev_quat_deriv.y+bef_prev_quat_deriv.y) - thi_s->S[FKC_STATE_QY], measurementQuatNoiseStd, FKC_STATE_QY);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.y + dt*(0.5*prev_quat_deriv.y+bef_prev_quat_deriv.y) - thi_s->S[FKC_STATE_QY], measurementQuatNoiseStd, FKC_STATE_QY);
-    floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.y + dt*(prev_quat_deriv.y+bef_prev_quat_deriv.y + bef_2_prev_quat_deriv.y) - thi_s->S[FKC_STATE_QY], measurementQuatNoiseStd, FKC_STATE_QY);
+    // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.y + dt*(prev_quat_deriv.y+bef_prev_quat_deriv.y + bef_2_prev_quat_deriv.y) - thi_s->S[FKC_STATE_QY], measurementQuatNoiseStd, FKC_STATE_QY);
 
     h[FKC_STATE_QY] = 0;
     h[FKC_STATE_QZ] = 1;
+    floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.z + 0.5f*dt*(prev_quat_deriv.z) - thi_s->S[FKC_STATE_QZ], measurementQuatNoiseStd, FKC_STATE_QZ);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.z + dt*(prev_quat_deriv.z) - thi_s->S[FKC_STATE_QZ], measurementQuatNoiseStd, FKC_STATE_QZ);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.z + dt*(prev_quat_deriv.z+bef_prev_quat_deriv.z) - thi_s->S[FKC_STATE_QZ], measurementQuatNoiseStd, FKC_STATE_QZ);
     // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.z + dt*(0.5*prev_quat_deriv.z+bef_prev_quat_deriv.z) - thi_s->S[FKC_STATE_QZ], measurementQuatNoiseStd, FKC_STATE_QZ);
-    floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.z + dt*(prev_quat_deriv.z+bef_prev_quat_deriv.z + bef_2_prev_quat_deriv.z) - thi_s->S[FKC_STATE_QZ], measurementQuatNoiseStd, FKC_STATE_QZ);
+    // floatyKalmanCoreScalarUpdate(thi_s, &H, pose->quat.z + dt*(prev_quat_deriv.z+bef_prev_quat_deriv.z + bef_2_prev_quat_deriv.z) - thi_s->S[FKC_STATE_QZ], measurementQuatNoiseStd, FKC_STATE_QZ);
     
     h[FKC_STATE_QZ] = 0;
 
@@ -229,7 +246,7 @@ PARAM_GROUP_START(delayComp)
 /**
  * @brief Activate or diactivate delay compensation
  */
-  PARAM_ADD_CORE(LOG_UINT8, activate, &use_delay_comp)
+  PARAM_ADD_CORE(PARAM_UINT8, activate, &use_delay_comp)
 
 
 PARAM_GROUP_STOP(delayComp)

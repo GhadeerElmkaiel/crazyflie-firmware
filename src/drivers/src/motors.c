@@ -397,10 +397,13 @@ void motorsHover()
 // Set motors values to zero. In case of servo go to beginning
 void motorsStop()
 {
-  motorsSetRatio(MOTOR_M1, 0);
-  motorsSetRatio(MOTOR_M2, 0);
-  motorsSetRatio(MOTOR_M3, 0);
-  motorsSetRatio(MOTOR_M4, 0);
+  // motorsSetRatio(MOTOR_M1, 0);
+  // motorsSetRatio(MOTOR_M2, 0);
+  // motorsSetRatio(MOTOR_M3, 0);
+  // motorsSetRatio(MOTOR_M4, 0);
+
+  motorsHover();
+
 #ifdef CONFIG_MOTORS_ESC_PROTOCOL_DSHOT
   motorsBurstDshot();
 #endif

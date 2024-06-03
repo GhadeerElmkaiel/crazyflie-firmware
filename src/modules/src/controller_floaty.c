@@ -60,10 +60,10 @@ static int table_iter = 0;
 static float ctrl_output_log[] = {0, 0, 0, 0};
 static float ctrl_motor_log[] = {0, 0, 0, 0};
 // static float ext_ctrl[] = {0, 0, 0, 0};
-static float ext_ctrl_m1 =  0.15;
-static float ext_ctrl_m2 = -0.15;
-static float ext_ctrl_m3 =  0.15;
-static float ext_ctrl_m4 = -0.15;
+static float ext_ctrl_m1 =  0.0;
+static float ext_ctrl_m2 = -0.0;
+static float ext_ctrl_m3 =  0.0;
+static float ext_ctrl_m4 = -0.0;
 
 static float target_yaw = 0.0;
 static float target_roll = 0.0;

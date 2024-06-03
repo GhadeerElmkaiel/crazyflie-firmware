@@ -88,10 +88,10 @@ static uint8_t useOptCalcs = 0;
 
 // float flapHoverAng = 0.436; // 25 degrees
 // float flapHoverAng = 0.349; // 20 degrees
-float flapHoverAng = 0.305; // 17.5 degrees
+// float flapHoverAng = 0.305; // 17.5 degrees
 // float flapHoverAng = 0.261; // 15 degrees
 // float flapHoverAng = 0.217; // 12.5 degrees
-// float flapHoverAng = 0.174; // 10 degrees
+float flapHoverAng = 0.174; // 10 degrees
 // float flapHoverAng = 0.087; // 5 degrees
 // float flapHoverAng = 0.0; // 0 degrees
 
@@ -167,30 +167,34 @@ static void assertFloatyStateNotNaN(const floatyKalmanCoreData_t* thi_s)
 void floatyKalmanCoreDefaultParams(floatyKalmanCoreParams_t* params)
 {
   // Initial variances, uncertain of position, but know we're stationary and roughly flat
-  params->stdDevInitialPosition =0.3;
-  params->stdDevInitialVelocity = 0.5;
-  params->stdDevInitialAttitude = 0.01;
-  params->stdDevInitialAngVelocity = 0.01;
-  params->stdDevInitialFlaps = 0.01;
+  params->stdDevInitialPosition =0.3f;
+  params->stdDevInitialVelocity = 0.5f;
+  params->stdDevInitialAttitude = 0.01f;
+  params->stdDevInitialAngVelocity = 0.01f;
+  params->stdDevInitialFlaps = 0.01f;
   // params->stdDevInitialAttitude_yaw = 0.01;
 
   params->procNoiseAcc_xy = 0.5f;
   params->procNoiseAcc_z = 1.0f;
-  // params->procNoiseVel = 0.5;
-  params->procNoiseVel = 0.9;
-  params->procNoisePos = 0.05;
-  params->procNoiseAtt = 0.025;
-  params->procNoiseAngVel = 0.05;
-  // params->measNoiseBaro = 2.0f;           // meters
+  params->procNoiseVel = 15.0f;
+  // params->procNoiseVel = 0.9f;
+  params->procNoisePos = 0.05f;
+  params->procNoiseAtt = 0.025f;
+  // params->procNoiseAngVel = 0.05f;
+  params->procNoiseAngVel = 0.15f;
+
+  // params->measNoiseBaro = 2.0f;           // metersmake
   // params->measNoiseGyro_rollpitch = 0.1f; // radians per second
   // params->measNoiseGyro_yaw = 0.1f;       // radians per second
-  params->measNoisePos = 0.002;           // meters
-  params->measNoiseAtt = 0.01;            // radians
-  params->measNoiseGyro = 0.05;            // radians
 
-  params->initialX = 0.0;
-  params->initialY = 0.0;
-  params->initialZ = 0.0;
+  // NOT USED
+  params->measNoisePos = 0.002f;           // meters
+  params->measNoiseAtt = 0.01f;            // radians
+  params->measNoiseGyro = 0.05f;            // radians
+
+  params->initialX = 0.0f;
+  params->initialY = 0.0f;
+  params->initialZ = 0.0f;
 
   // Initial yaw of the Crazyflie in radians.
   // 0 --- facing positive X
@@ -203,10 +207,10 @@ void floatyKalmanCoreDefaultParams(floatyKalmanCoreParams_t* params)
   // params->initialQ3 = 0.0;
   
   // I changed to this as to make sure that there is no confusion with what convension is used
-  params->initialQW = 1.0;
-  params->initialQX = 0.0;
-  params->initialQY = 0.0;
-  params->initialQZ = 0.0;
+  params->initialQW = 1.0f;
+  params->initialQX = 0.0f;
+  params->initialQY = 0.0f;
+  params->initialQZ = 0.0f;
 
   // In the case of linearization, the process noise should be higher
   if(linearized_state_estimation_matrix){
@@ -317,6 +321,16 @@ void floatyKalmanCoreInit(floatyKalmanCoreData_t *thi_s, const floatyKalmanCoreP
   thi_s->P[FKC_STATE_F2][FKC_STATE_F2] = powf(params->stdDevInitialFlaps, 2);
   thi_s->P[FKC_STATE_F3][FKC_STATE_F3] = powf(params->stdDevInitialFlaps, 2);
   thi_s->P[FKC_STATE_F4][FKC_STATE_F4] = powf(params->stdDevInitialFlaps, 2);
+
+  // // Initial uncertainty for velocity position uncertainty
+  // thi_s->P[FKC_STATE_X][FKC_STATE_PX]  = powf(params->stdDevInitialPosition, 2);
+  // thi_s->P[FKC_STATE_Y][FKC_STATE_PY]  = powf(params->stdDevInitialPosition, 2);
+  // thi_s->P[FKC_STATE_Z][FKC_STATE_PZ]  = powf(params->stdDevInitialPosition, 2);
+
+  // thi_s->P[FKC_STATE_PX][FKC_STATE_X]  = powf(params->stdDevInitialPosition, 2);
+  // thi_s->P[FKC_STATE_PY][FKC_STATE_Y]  = powf(params->stdDevInitialPosition, 2);
+  // thi_s->P[FKC_STATE_PZ][FKC_STATE_Z]  = powf(params->stdDevInitialPosition, 2);
+
 
   thi_s->Pm.numRows = FKC_STATE_DIM;
   thi_s->Pm.numCols = FKC_STATE_DIM;
@@ -458,10 +472,22 @@ void floatyKalmanCoreScalarUpdate(floatyKalmanCoreData_t* thi_s, arm_matrix_inst
 
     for (int i=0; i<FKC_STATE_DIM; i++) { // Add the element of HPH' to the above
       if(i<FKC_STATE_ARX){
+      // if(i<=FKC_STATE_PZ){
         K[i]=0;
       }
       else{
         K[i] = thi_s->P[state_idx][i]/HPHR; // thi_s obviously only works if the update is scalar (as in thi_s function)
+      }
+      thi_s->S[i] = thi_s->S[i] + K[i] * error; // state update    
+    }
+  }
+  else if(state_idx>FKC_STATE_PZ){
+    for (int i=0; i<FKC_STATE_DIM; i++) { // Add the element of HPH' to the above
+      if(i<FKC_STATE_ARX && i >FKC_STATE_PZ){
+        K[i] = thi_s->P[state_idx][i]/HPHR; // thi_s obviously only works if the update is scalar (as in thi_s function)
+      }
+      else{
+        K[i]=0;
       }
       thi_s->S[i] = thi_s->S[i] + K[i] * error; // state update    
     }
@@ -649,12 +675,44 @@ void floatyKalmanCoreScalarUpdateDiagP(floatyKalmanCoreData_t* thi_s, int state_
   thi_s->S[state_idx] = thi_s->S[state_idx] + K_Scalar * error; // state update
   thi_s->P[state_idx][state_idx] = (1-K_Scalar)*P_ii;
 
+  float p = thi_s->P[state_idx][state_idx];
+  if (isnan(p) || p > MAX_COVARIANCE) {
+    thi_s->P[state_idx][state_idx] = MAX_COVARIANCE;
+  } else if (p < MIN_COVARIANCE ) {
+    thi_s->P[state_idx][state_idx] = MIN_COVARIANCE;
+  }
+
   // ====== UPDATE VELOCITY ======
   K_Scalar_i3 = P_i3/HPHR; // kalman gain for velocity value = (PH' (HPH' + R )^-1)
   // K_Scalar_i3 = P_i3/(HPHR*5); // Exasurated uncertainty to check quality of prdict step for the velocety
+
+  // %%%%%%%%%%%%%%%%%%%%%%% DEBUG %%%%%%%%%%%%%%%%%%%%%%%
+  // K_Scalar_i3 = 1; // For Debugging
   thi_s->S[state_idx+3] = thi_s->S[state_idx+3] + K_Scalar_i3 * errorForVel; // state update
-  thi_s->P[state_idx][state_idx+3] = thi_s->P[state_idx+3][state_idx] = P_i3 - 0.5*(K_Scalar*P_i3 + K_Scalar_i3*P_ii);
-  thi_s->P[state_idx+3][state_idx+3] = P_33 - 0.5*(K_Scalar*P_i3 + K_Scalar_i3*P_ii);
+
+  // thi_s->P[state_idx][state_idx+3] = thi_s->P[state_idx+3][state_idx] = P_i3 - 0.5*(K_Scalar*P_i3 + K_Scalar_i3*P_ii);
+  p = P_i3 - 0.5*(K_Scalar*P_i3 + K_Scalar_i3*P_ii);
+  thi_s->P[state_idx][state_idx+3] = thi_s->P[state_idx+3][state_idx] = p;
+  // if (isnan(p) || p > MAX_COVARIANCE) {
+  //   thi_s->P[state_idx][state_idx+3] = thi_s->P[state_idx+3][state_idx] = MAX_COVARIANCE;
+  // } else if (p < 0 ) {
+  //   thi_s->P[state_idx][state_idx+3] = thi_s->P[state_idx+3][state_idx] = 0;
+  // } else {
+  //   thi_s->P[state_idx][state_idx+3] = thi_s->P[state_idx+3][state_idx] = p;
+  // }
+
+  // thi_s->P[state_idx+3][state_idx+3] = P_33 - 0.5*(K_Scalar*P_i3 + K_Scalar_i3*P_ii); I think this is wrong 
+
+  // thi_s->P[state_idx+3][state_idx+3] = P_33 - (K_Scalar_i3*P_i3);
+  p = P_33 - (K_Scalar_i3*P_i3);
+
+  if (isnan(p) || p > MAX_COVARIANCE) {
+    thi_s->P[state_idx+3][state_idx+3] = MAX_COVARIANCE;
+  } else if (p < MIN_COVARIANCE ) {
+    thi_s->P[state_idx+3][state_idx+3] = MIN_COVARIANCE;
+  } else {
+    thi_s->P[state_idx+3][state_idx+3] = p;
+  }
 
   assertFloatyStateNotNaN(thi_s);
 }
@@ -779,41 +837,52 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
     float yaw = atan2f(2*(thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QY]+thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QZ]) , thi_s->S[FKC_STATE_QW]*thi_s->S[FKC_STATE_QW] + thi_s->S[FKC_STATE_QX]*thi_s->S[FKC_STATE_QX] - thi_s->S[FKC_STATE_QY]*thi_s->S[FKC_STATE_QY] - thi_s->S[FKC_STATE_QZ]*thi_s->S[FKC_STATE_QZ]);
     float cos_y = arm_cos_f32(yaw);
     float sin_y = arm_sin_f32(yaw);
-    float Dx = State_Est_A_matrix[FKC_STATE_PX][FKC_STATE_PX];
-    float Dy = State_Est_A_matrix[FKC_STATE_PY][FKC_STATE_PY];
+    // float Dx = State_Est_A_matrix[FKC_STATE_PX][FKC_STATE_PX];
+    // float Dy = State_Est_A_matrix[FKC_STATE_PY][FKC_STATE_PY];
 
-    float Gx = State_Est_A_matrix[FKC_STATE_PX][FKC_STATE_QY];
-    float Gy = State_Est_A_matrix[FKC_STATE_PY][FKC_STATE_QX];
+    // float Gx = State_Est_A_matrix[FKC_STATE_PX][FKC_STATE_QY];
+    // float Gy = State_Est_A_matrix[FKC_STATE_PY][FKC_STATE_QX];
     
 
-    for(int i=0; i<FKC_STATE_DIM; i++){
-      RotatedVelstate[i] = thi_s->S[i];
-    }
-    RotatedVelstate[FKC_STATE_PX] = cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY];
-    RotatedVelstate[FKC_STATE_PY] = sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY];
+    // for(int i=0; i<FKC_STATE_DIM; i++){
+    //   RotatedVelstate[i] = thi_s->S[i];
+    // }
+    // RotatedVelstate[FKC_STATE_PX] = cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY];
+    // RotatedVelstate[FKC_STATE_PY] = sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY];
     
     for(int i=0; i<FKC_STATE_DIM; i++){
       float sum = 0;
       // ====================================================================
       // Rotate the A matrix from zero-yaw frame to the Inertial global frame 
       if(i==FKC_STATE_PX){
-        // for(int j=0; j<FKC_STATE_DIM; j++){
-        //   float State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][j]*cos_y - State_Est_A_matrix[FKC_STATE_PY][j]*sin_y;
-        //   sum+= State_Est_j_element*thi_s->S[j];
-        //   A[FKC_STATE_PX][j] = State_Est_j_element;
-        // }
+        
+        
+        // continue;
+
 
         // For the velocity, the model calculates the change in a rotated frame (Yaw = 0)
         // So it is necessary to rotate the results back to the inertial frame. Additionally,
-        // The used velocity components of the state vector are in the body frame so it is 
+        // The used velocity components of the state vector are in the inertial frame so it is 
         // needed to rotate them first to the body frame then calculate, then rotate back to inertial (if needed) 
         for(int j=0; j<FKC_STATE_DIM; j++){
           float State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][j]*cos_y - State_Est_A_matrix[FKC_STATE_PY][j]*sin_y;
           if(j==FKC_STATE_PX){
-            sum+= State_Est_j_element*(cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY]);
+            // sum+= State_Est_j_element*(cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY])
+
+            // Fixing a bugin the calculation
+            sum+= State_Est_j_element*(cos_y*thi_s->S[FKC_STATE_PX] + sin_y*thi_s->S[FKC_STATE_PY]);
+            // The follow calculation is accurate, but assuming that the drag coef is similar for X and Y we can approximate it
+            // State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][FKC_STATE_PX]*cos_y*cos_y + State_Est_A_matrix[FKC_STATE_PY][FKC_STATE_PY]*sin_y*sin_y;
+            State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][FKC_STATE_PX];
           }
           else if(j==FKC_STATE_PY){
-            sum+= State_Est_j_element*(sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
+            // sum+= State_Est_j_element*(sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
+            
+            // Fixing a bugin the calculation
+            sum+= State_Est_j_element*(-sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
+            // The follow calculation is accurate, but assuming that the drag coef is similar for X and Y we can approximate it
+            // State_Est_j_element = cos_y*sin_y*(State_Est_A_matrix[FKC_STATE_PX][FKC_STATE_PX] - State_Est_A_matrix[FKC_STATE_PY][FKC_STATE_PY]);
+            State_Est_j_element = 0;
           }
           else{
             sum+= State_Est_j_element*thi_s->S[j];
@@ -823,15 +892,31 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
         }
 
       }
-      else if (i==FKC_STATE_PY)
-      {
+      else if (i==FKC_STATE_PY){
+        
+        
+        // continue;
+
+
         for(int j=0; j<FKC_STATE_DIM; j++){
           float State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][j]*sin_y + State_Est_A_matrix[FKC_STATE_PY][j]*cos_y;
           if(j==FKC_STATE_PX){
-            sum+= State_Est_j_element*(cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY]);
+            // sum+= State_Est_j_element*(cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY]);
+            
+            // Fixing a bugin the calculation
+            sum+= State_Est_j_element*(cos_y*thi_s->S[FKC_STATE_PX] + sin_y*thi_s->S[FKC_STATE_PY]);
+            // The follow calculation is accurate, but assuming that the drag coef is similar for X and Y we can approximate it
+            // State_Est_j_element = cos_y*sin_y*(State_Est_A_matrix[FKC_STATE_PX][FKC_STATE_PX] - State_Est_A_matrix[FKC_STATE_PY][FKC_STATE_PY]);
+            State_Est_j_element = 0;
           }
           else if(j==FKC_STATE_PY){
-            sum+= State_Est_j_element*(sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
+            // sum+= State_Est_j_element*(sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
+            
+            // Fixing a bugin the calculation
+            sum+= State_Est_j_element*(-sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
+            // The follow calculation is accurate, but assuming that the drag coef is similar for X and Y we can approximate it
+            // State_Est_j_element = State_Est_A_matrix[FKC_STATE_PX][FKC_STATE_PX]*cos_y*cos_y + State_Est_A_matrix[FKC_STATE_PY][FKC_STATE_PY]*sin_y*sin_y;
+            State_Est_j_element = State_Est_A_matrix[FKC_STATE_PY][FKC_STATE_PY];
           }
           else{
             sum+= State_Est_j_element*thi_s->S[j];
@@ -847,10 +932,12 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
 
         for(int j=0; j<FKC_STATE_DIM; j++){
           if(j==FKC_STATE_PX){
-            sum+= State_Est_A_matrix[i][j]*(cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY]);
+            // sum+= State_Est_A_matrix[i][j]*(cos_y*thi_s->S[FKC_STATE_PX] - sin_y*thi_s->S[FKC_STATE_PY]);
+            sum+= State_Est_A_matrix[i][j]*(cos_y*thi_s->S[FKC_STATE_PX] + sin_y*thi_s->S[FKC_STATE_PY]);
           }
           else if(j==FKC_STATE_PY){
-            sum+= State_Est_A_matrix[i][j]*(sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
+            // sum+= State_Est_A_matrix[i][j]*(sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
+            sum+= State_Est_A_matrix[i][j]*(-sin_y*thi_s->S[FKC_STATE_PX] + cos_y*thi_s->S[FKC_STATE_PY]);
           }
           else{
             sum+= State_Est_A_matrix[i][j]*thi_s->S[j];
@@ -1081,7 +1168,13 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
       // }
 
       // update the corulated uncertainty for velocity and position
-      p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]) +dt*(thi_s->P[i+3][i+3]+A[i+3][i+3]*thi_s->P[i][i+3]); // Updating using the first part of P* = AP + PA' + Q
+      
+      
+      // continue;
+
+
+
+      p = 0.5f*(thi_s->P[i][i+3] + thi_s->P[i+3][i]) +dt*(thi_s->P[i+3][i+3]+A[i+3][i+3]*thi_s->P[i][i+3]); // Updating using the first part of P* = AP + PA' + Q
       thi_s->P[i][i+3] = thi_s->P[i+3][i] = p;
       // if (isnan(p) || p > MAX_COVARIANCE) {
       //   thi_s->P[i][i+3] = thi_s->P[i+3][i] = MAX_COVARIANCE;
@@ -1219,7 +1312,7 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
       }
 
       // Updating the correlated uncertainty for the velocity and position information
-      p = 0.5*(thi_s->P[i][i+3] + thi_s->P[i+3][i]); 
+      p = 0.5f*(thi_s->P[i][i+3] + thi_s->P[i+3][i]); 
       if (isnan(p) || p > MAX_COVARIANCE) {
         thi_s->P[i][i+3] = thi_s->P[i+3][i] = MAX_COVARIANCE;
       } else if (p < MIN_COVARIANCE ) {
@@ -1240,7 +1333,9 @@ void floatyKalmanCorePredict(floatyKalmanCoreData_t* thi_s, floaty_control_t* in
   //     }
   // }
 
-
+  // thi_s->P[FKC_STATE_ARX][FKC_STATE_ARY] = thi_s->P[FKC_STATE_ARY][FKC_STATE_ARX] = 0;
+  // thi_s->P[FKC_STATE_ARX][FKC_STATE_ARZ] = thi_s->P[FKC_STATE_ARZ][FKC_STATE_ARX] = 0;
+  // thi_s->P[FKC_STATE_ARY][FKC_STATE_ARZ] = thi_s->P[FKC_STATE_ARZ][FKC_STATE_ARY] = 0;
 
 
 
