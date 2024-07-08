@@ -86,12 +86,13 @@
 
 static uint8_t useOptCalcs = 0;
 
-// float flapHoverAng = 0.436; // 25 degrees
+// float flapHoverAng = 0.523; // 30 degrees
+float flapHoverAng = 0.436; // 25 degrees
 // float flapHoverAng = 0.349; // 20 degrees
 // float flapHoverAng = 0.305; // 17.5 degrees
 // float flapHoverAng = 0.261; // 15 degrees
 // float flapHoverAng = 0.217; // 12.5 degrees
-float flapHoverAng = 0.174; // 10 degrees
+// float flapHoverAng = 0.174; // 10 degrees
 // float flapHoverAng = 0.087; // 5 degrees
 // float flapHoverAng = 0.0; // 0 degrees
 

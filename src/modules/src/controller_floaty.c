@@ -48,8 +48,8 @@ int phase_num;
 // static float min_f_ang = -0.7;
 // static float max_f_ang = 0.7;
 
-static float min_f_ang = -1.11;
-static float max_f_ang = 1.11;
+static float min_f_ang = -0.9;
+static float max_f_ang = 0.9;
 
 static int table_iter = 0;
 
@@ -519,8 +519,12 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     ctrl_output_log[2] = control_m[2];
     ctrl_output_log[3] = control_m[3];
 
-    if(control->flap_1 < min_f_ang){
-      control->flap_1 = min_f_ang;
+    // if(control->flap_1 < min_f_ang){
+    //   control->flap_1 = min_f_ang;
+    // }
+
+    if(control->flap_1 < 0){
+      control->flap_1 = 0;
     }
 
     if(control->flap_1 > max_f_ang){
@@ -532,13 +536,21 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       control->flap_2 = min_f_ang;
     }
 
-    if(control->flap_2 > max_f_ang){
-      control->flap_2 = max_f_ang;
+    // if(control->flap_2 > max_f_ang){
+    //   control->flap_2 = max_f_ang;
+    // }
+
+    if(control->flap_2 > 0){
+      control->flap_2 = 0;
     }
 
 
-    if(control->flap_3 < min_f_ang){
-      control->flap_3 = min_f_ang;
+    // if(control->flap_3 < min_f_ang){
+    //   control->flap_3 = min_f_ang;
+    // }
+
+    if(control->flap_3 < 0){
+      control->flap_3 = 0;
     }
 
     if(control->flap_3 > max_f_ang){
@@ -550,8 +562,12 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       control->flap_4 = min_f_ang;
     }
 
-    if(control->flap_4 > max_f_ang){
-      control->flap_4 = max_f_ang;
+    // if(control->flap_4 > max_f_ang){
+    //   control->flap_4 = max_f_ang;
+    // }
+
+    if(control->flap_4 > 0){
+      control->flap_4 = 0;
     }
     
 
