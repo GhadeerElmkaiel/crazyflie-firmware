@@ -794,13 +794,25 @@ PARAM_GROUP_START(extCtrl)
  */
   PARAM_ADD_CORE(PARAM_FLOAT, roll_P, &P_vector[F_ERR_ROLL])
 /**
+ * @brief A parameter to set the P param for pitch rate control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, pitch_P, &P_vector[F_ERR_PITCH])
+/**
+ * @brief A parameter to set the P param for yaw rate control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, yaw_P, &P_vector[F_ERR_YAW])
+/**
  * @brief A parameter to set the P param for roll rate control
  */
   PARAM_ADD_CORE(PARAM_FLOAT, roll_rate_P, &P_vector[F_ERR_ARX])
 /**
- * @brief A parameter to set the P param for roll rate control
+ * @brief A parameter to set the P param for pitch rate control
  */
   PARAM_ADD_CORE(PARAM_FLOAT, pitch_rate_P, &P_vector[F_ERR_ARY])
+/**
+ * @brief A parameter to set the P param for yaw rate control
+ */
+  PARAM_ADD_CORE(PARAM_FLOAT, yaw_rate_P, &P_vector[F_ERR_ARZ])
 /**
  * @brief The controller output for M1 (in Radian)
  */
