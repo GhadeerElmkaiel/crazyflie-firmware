@@ -48,7 +48,7 @@ int phase_num;
 // static float min_f_ang = -0.7;
 // static float max_f_ang = 0.7;
 
-static float min_f_ang = -0.9;
+static float min_f_ang = -0.3;
 static float max_f_ang = 0.9;
 
 static int table_iter = 0;
@@ -452,12 +452,17 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       else{
 
         if(manual==4){
-          // iter_step = (int)SWITCHING_RATE/(cos_signal_rate*2);
+          // iter_step = (int)SWITCHING_RATE/(cos_signal_rate*2);sin_table
 
-          control->flap_1 = FLAP_1_HOVER_ANGLE*square_table[table_iter];
-          control->flap_2 = FLAP_2_HOVER_ANGLE*square_table[table_iter];
-          control->flap_3 = FLAP_3_HOVER_ANGLE*square_table[table_iter];
-          control->flap_4 = FLAP_4_HOVER_ANGLE*square_table[table_iter];
+          control->flap_1 = 2*FLAP_1_HOVER_ANGLE*sin_table[(table_iter*3)%table_size];
+          control->flap_2 = 2*FLAP_2_HOVER_ANGLE*sin_table[(table_iter*3)%table_size];
+          control->flap_3 = 2*FLAP_3_HOVER_ANGLE*sin_table[(table_iter*3)%table_size];
+          control->flap_4 = 2*FLAP_4_HOVER_ANGLE*sin_table[(table_iter*3)%table_size];
+
+          // control->flap_1 = FLAP_1_HOVER_ANGLE*square_table[table_iter];
+          // control->flap_2 = FLAP_2_HOVER_ANGLE*square_table[table_iter];
+          // control->flap_3 = FLAP_3_HOVER_ANGLE*square_table[table_iter];
+          // control->flap_4 = FLAP_4_HOVER_ANGLE*square_table[table_iter];
 
           // control->flap_1 = ext_ctrl_m1;
         }
@@ -519,12 +524,8 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     ctrl_output_log[2] = control_m[2];
     ctrl_output_log[3] = control_m[3];
 
-    // if(control->flap_1 < min_f_ang){
-    //   control->flap_1 = min_f_ang;
-    // }
-
-    if(control->flap_1 < 0){
-      control->flap_1 = 0;
+    if(control->flap_1 < min_f_ang){
+      control->flap_1 = min_f_ang;
     }
 
     if(control->flap_1 > max_f_ang){
@@ -532,25 +533,16 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     }
 
 
-    if(control->flap_2 < min_f_ang){
-      control->flap_2 = min_f_ang;
+    if(control->flap_2 < -max_f_ang){
+      control->flap_2 = -max_f_ang;
     }
 
-    // if(control->flap_2 > max_f_ang){
-    //   control->flap_2 = max_f_ang;
-    // }
-
-    if(control->flap_2 > 0){
-      control->flap_2 = 0;
+    if(control->flap_2 > -min_f_ang){
+      control->flap_2 = -min_f_ang;
     }
 
-
-    // if(control->flap_3 < min_f_ang){
-    //   control->flap_3 = min_f_ang;
-    // }
-
-    if(control->flap_3 < 0){
-      control->flap_3 = 0;
+    if(control->flap_3 < min_f_ang){
+      control->flap_3 = min_f_ang;
     }
 
     if(control->flap_3 > max_f_ang){
@@ -558,17 +550,51 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     }
 
 
-    if(control->flap_4 < min_f_ang){
-      control->flap_4 = min_f_ang;
+    if(control->flap_4 < -max_f_ang){
+      control->flap_4 = -max_f_ang;
     }
 
-    // if(control->flap_4 > max_f_ang){
-    //   control->flap_4 = max_f_ang;
+    if(control->flap_4 > -min_f_ang){
+      control->flap_4 = -min_f_ang;
+    }
+    
+    // ---------------------------
+    // // Limit falps by zero
+    // ---------------------------
+
+    // if(control->flap_1 < 0){
+    //   control->flap_1 = 0;
     // }
 
-    if(control->flap_4 > 0){
-      control->flap_4 = 0;
-    }
+    // if(control->flap_1 > max_f_ang){
+    //   control->flap_1 = max_f_ang;
+    // }
+
+
+    // if(control->flap_2 < -max_f_ang){
+    //   control->flap_2 = -max_f_ang;
+    // }
+
+    // if(control->flap_2 > 0){
+    //   control->flap_2 = 0;
+    // }
+
+    // if(control->flap_3 < 0){
+    //   control->flap_3 = 0;
+    // }
+
+    // if(control->flap_3 > max_f_ang){
+    //   control->flap_3 = max_f_ang;
+    // }
+
+
+    // if(control->flap_4 < -max_f_ang){
+    //   control->flap_4 = -max_f_ang;
+    // }
+
+    // if(control->flap_4 > 0){
+    //   control->flap_4 = 0;
+    // }
     
 
     measurement_t measurement;
