@@ -64,7 +64,10 @@ const float u_vector[4][4] ={
 // Test different x sign
 // static float P_vector[F_ERR_DIM] = {2.500,   2.500,   2.000,  0.500,   0.100,   0.300,  -0.300,  -0.150,   0.200,  -0.080,  -0.030,   0.050,   0.000,   0.000,   0.000,   0.000};
 // More Yaw
-static float P_vector[F_ERR_DIM] = {2.500,   2.500,   2.000,  0.500,   0.100,   0.300,  -0.300,  -0.150,   0.400,  -0.080,  -0.030,   0.070,   0.000,   0.000,   0.000,   0.000};
+// // First flying controller
+// static float P_vector[F_ERR_DIM] = {2.500,   2.500,   2.000,  0.500,   0.100,   0.300,  -0.300,  -0.150,   0.400,  -0.080,  -0.030,   0.070,   0.000,   0.000,   0.000,   0.000};
+// Better controller as the Y and Z velocity feedbcak is more agressive + (roll angle rate feedback)
+static float P_vector[F_ERR_DIM] = {2.500,   2.500,   2.000,  0.500,   0.500,   0.800,  -0.300,  -0.150,   0.400,  -0.180,  -0.030,   0.070,   0.000,   0.000,   0.000,   0.000};
 
 
 // static float P_vector[F_ERR_DIM] = {-0.000,   0.000,   0.950,  -0.000,   0.000,   0.650,  -0.450,  -0.100,   0.300,  -0.020,  -0.050,   0.080,   0.000,   0.000,   0.000,   0.000};
