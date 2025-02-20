@@ -85,6 +85,8 @@ NO_DMA_CCM_SAFE_ZERO_INIT static float error_PID_d[F_ERR_DIM];
 
 // bool use_I_ctrl = false;
 const bool test_rate_PID = true;
+const bool PI_only_ZY = true;
+
 // const bool switching_conf = true;
 const bool switching_conf = false;
 
@@ -326,32 +328,58 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
     if(test_rate_PID && state->connectedToOffboard==true){
 
-      for(int iter=0; iter<F_ERR_ARX; iter++){
-        error_I_d[iter] = error_I_d[iter] + error_m[iter]*control_dt;
-        error_D_d[iter] = (error_m[iter]-error_prev_d[iter])/control_dt;
-        error_PID_d[iter] = error_m[iter]*P_vector[iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
-        error_prev_d[iter] = error_m[iter];
+      // =================
+      // PI only for Z
+      // =================
+      if(PI_only_ZY){
+
+          for(int iter=0; iter<F_ERR_DIM; iter++){
+              if(iter == F_ERR_Z || iter == F_ERR_Y)
+              {
+                  error_I_d[iter] = error_I_d[iter] + error_m[iter]*control_dt;
+
+                  // To make sure that integrated error does not exceed max value
+                  if(error_I_d[iter]>max_I_error[iter]){
+                      error_I_d[iter] = max_I_error[iter];
+                  }
+                  if(error_I_d[iter]<-max_I_error[iter]){
+                      error_I_d[iter] = -max_I_error[iter];
+                  }
+              }
+              error_PID_d[iter] = error_m[iter]*P_vector[iter] + error_I_d[iter]*I_vector[iter];
+          }
       }
+      // =================
+      // PID For everything
+      // =================
+      else{
+          for(int iter=0; iter<F_ERR_ARX; iter++){
+            error_I_d[iter] = error_I_d[iter] + error_m[iter]*control_dt;
+            error_D_d[iter] = (error_m[iter]-error_prev_d[iter])/control_dt;
+            error_PID_d[iter] = error_m[iter]*P_vector[iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
+            error_prev_d[iter] = error_m[iter];
+          }
 
-      // // Adding target angle to attitude control 
-      // for(int iter=F_ERR_ARX; iter<F_ERR_F1; iter++){
-      //   float targetAngRate = error_m[iter-3];
-      //   float rateLimit = 3;
-      //   if(targetAngRate>rateLimit){
-      //     targetAngRate = rateLimit;
-      //   }
-      //   else if(targetAngRate<-rateLimit){
-      //     targetAngRate = -rateLimit;
-      //   }
-      //   error_m[iter] +=targetAngRate;
-      // }
+          // // Adding target angle to attitude control 
+          // for(int iter=F_ERR_ARX; iter<F_ERR_F1; iter++){
+          //   float targetAngRate = error_m[iter-3];
+          //   float rateLimit = 3;
+          //   if(targetAngRate>rateLimit){
+          //     targetAngRate = rateLimit;
+          //   }
+          //   else if(targetAngRate<-rateLimit){
+          //     targetAngRate = -rateLimit;
+          //   }
+          //   error_m[iter] +=targetAngRate;
+          // }
 
 
-      for(int iter=F_ERR_ARX; iter<F_ERR_DIM; iter++){
-        error_I_d[iter] = error_I_d[iter] + error_m[iter]*control_dt;
-        error_D_d[iter] = (error_m[iter]-error_prev_d[iter])/control_dt;
-        error_PID_d[iter] = error_m[iter]*P_vector[iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
-        error_prev_d[iter] = error_m[iter];
+          for(int iter=F_ERR_ARX; iter<F_ERR_DIM; iter++){
+            error_I_d[iter] = error_I_d[iter] + error_m[iter]*control_dt;
+            error_D_d[iter] = (error_m[iter]-error_prev_d[iter])/control_dt;
+            error_PID_d[iter] = error_m[iter]*P_vector[iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
+            error_prev_d[iter] = error_m[iter];
+          }
       }
 
       compined_PID_d[0] = error_PID_d[0] + error_PID_d[3] + error_PID_d[7] + error_PID_d[10];
@@ -359,6 +387,17 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       compined_PID_d[2] = error_PID_d[2] + error_PID_d[5];
       compined_PID_d[3] = error_PID_d[8] + error_PID_d[11];
 
+      // Limit all errors, upper and lower
+      for(int iter=0; iter<4; iter++){
+          if(compined_PID_d[iter]>1.5*flapHoverAng){
+            compined_PID_d[iter]=1.5*flapHoverAng;
+          }
+          if(compined_PID_d[iter]<-1.5*flapHoverAng){
+            compined_PID_d[iter]=-1.5*flapHoverAng;
+          }
+      }
+
+      // Limit upper Z error by hover angle only
       if(compined_PID_d[2]>flapHoverAng){
         compined_PID_d[2]=flapHoverAng;
       }
