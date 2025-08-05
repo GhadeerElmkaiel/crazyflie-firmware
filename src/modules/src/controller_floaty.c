@@ -465,6 +465,11 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
         control->flap_2 = control_m[1] + setpoint->flaps.flap_2;
         control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
         control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
+
+        // control->flap_1 = setpoint->flaps.flap_1;
+        // control->flap_2 = setpoint->flaps.flap_2;
+        // control->flap_3 = setpoint->flaps.flap_3;
+        // control->flap_4 = setpoint->flaps.flap_4;
       }
 
       // // Integrate error
