@@ -59,6 +59,7 @@ static int table_iter = 0;
 
 static float ctrl_output_log[] = {0, 0, 0, 0};
 static float ctrl_motor_log[] = {0, 0, 0, 0};
+static float ctrl_tilde_log[] = {0, 0, 0, 0};
 // static float ext_ctrl[] = {0, 0, 0, 0};
 static float ext_ctrl_m1 =  0.0;
 static float ext_ctrl_m2 = -0.0;
@@ -359,15 +360,15 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       compined_PID_d[2] = error_PID_d[2] + error_PID_d[5];
       compined_PID_d[3] = error_PID_d[8] + error_PID_d[11];
 
+      ctrl_tilde_log[0] = compined_PID_d[0];
+      ctrl_tilde_log[1] = compined_PID_d[1];
+      ctrl_tilde_log[2] = compined_PID_d[2];
+      ctrl_tilde_log[3] = compined_PID_d[3];
+
+
       if(compined_PID_d[2]>flapHoverAng){
         compined_PID_d[2]=flapHoverAng;
       }
-
-      // compined_PID_d[0] = 0;
-      // compined_PID_d[1] = 0;
-      // compined_PID_d[2] = 0;
-      // compined_PID_d[3] = 0;
-
       // Multiply the u matrix by the compined PID to generate the control matrix
       mat_mult(&tmpNN4m, &tmpNN3m, &tmpNN1m);
     }
@@ -768,6 +769,30 @@ LOG_ADD_CORE(LOG_FLOAT, min_angle, &min_f_ang)
 LOG_ADD_CORE(LOG_FLOAT, max_angle, &max_f_ang)
 
 LOG_GROUP_STOP(motors_ctrp)
+
+
+/**
+ * The command that get to the motors
+ */
+LOG_GROUP_START(ctrl_tilde)
+/**
+ * @brief The control that M1 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m1, &ctrl_tilde_log[0])
+/**
+ * @brief The control that M2 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m2, &ctrl_tilde_log[1])
+/**
+ * @brief The control that M3 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m3, &ctrl_tilde_log[2])
+/**
+ * @brief The control that M4 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m4, &ctrl_tilde_log[3])
+
+LOG_GROUP_STOP(ctrl_tilde)
 
 
 /**
