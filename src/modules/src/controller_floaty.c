@@ -59,6 +59,7 @@ static int table_iter = 0;
 
 static float ctrl_output_log[] = {0, 0, 0, 0};
 static float ctrl_motor_log[] = {0, 0, 0, 0};
+static float ctrl_tilde_log[] = {0, 0, 0, 0};
 // static float ext_ctrl[] = {0, 0, 0, 0};
 static float ext_ctrl_m1 =  0.0;
 static float ext_ctrl_m2 = -0.0;
@@ -358,6 +359,12 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       compined_PID_d[1] = error_PID_d[1] + error_PID_d[4] + error_PID_d[6] + error_PID_d[9];
       compined_PID_d[2] = error_PID_d[2] + error_PID_d[5];
       compined_PID_d[3] = error_PID_d[8] + error_PID_d[11];
+
+      ctrl_tilde_log[0] = compined_PID_d[0];
+      ctrl_tilde_log[1] = compined_PID_d[1];
+      ctrl_tilde_log[2] = compined_PID_d[2];
+      ctrl_tilde_log[3] = compined_PID_d[3];
+
 
       if(compined_PID_d[2]>flapHoverAng){
         compined_PID_d[2]=flapHoverAng;
