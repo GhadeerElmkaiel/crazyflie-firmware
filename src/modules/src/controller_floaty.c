@@ -778,6 +778,31 @@ LOG_GROUP_STOP(motors_ctrp)
 
 
 /**
+ * The command that get to the motors
+ */
+LOG_GROUP_START(ctrl_tilde)
+/**
+ * @brief The control that M1 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m1, &ctrl_tilde_log[0])
+/**
+ * @brief The control that M2 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m2, &ctrl_tilde_log[1])
+/**
+ * @brief The control that M3 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m3, &ctrl_tilde_log[2])
+/**
+ * @brief The control that M4 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m4, &ctrl_tilde_log[3])
+
+LOG_GROUP_STOP(ctrl_tilde)
+
+
+
+/**
  * Logging variables for the command and reference signals for the
  * altitude PID controller
  */
