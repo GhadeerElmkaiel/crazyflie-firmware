@@ -475,17 +475,10 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
             // control->flap_3 = ext_ctrl_m3;
             // control->flap_4 = ext_ctrl_m4;
             // // This is a safer configuration for landing
-<<<<<<< HEAD
-            control->flap_1 = FLAP_1_HOVER_ANGLE+0.05;
-            control->flap_2 = FLAP_2_HOVER_ANGLE-0.05;
-            control->flap_3 = FLAP_3_HOVER_ANGLE+0.05;
-            control->flap_4 = FLAP_4_HOVER_ANGLE-0.05;
-=======
             control->flap_1 = FLAP_1_HOVER_ANGLE+0.05f;
             control->flap_2 = FLAP_2_HOVER_ANGLE-0.05f;
             control->flap_3 = FLAP_3_HOVER_ANGLE+0.05f;
             control->flap_4 = FLAP_4_HOVER_ANGLE-0.05f;
->>>>>>> e7ccc64f... Changed flap angles to near hover configureation when Optitrack communications is lost
           }
         }
         // if(manual==3){
