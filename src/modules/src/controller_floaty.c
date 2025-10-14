@@ -463,10 +463,15 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
         }
         else{
           if(state->connectedToOffboard==false){
-            control->flap_1 = ext_ctrl_m1;
-            control->flap_2 = ext_ctrl_m2;
-            control->flap_3 = ext_ctrl_m3;
-            control->flap_4 = ext_ctrl_m4;
+            // control->flap_1 = ext_ctrl_m1;
+            // control->flap_2 = ext_ctrl_m2;
+            // control->flap_3 = ext_ctrl_m3;
+            // control->flap_4 = ext_ctrl_m4;
+            // // This is a safer configuration for landing
+            control->flap_1 = FLAP_1_HOVER_ANGLE+0.05f;
+            control->flap_2 = FLAP_2_HOVER_ANGLE-0.05f;
+            control->flap_3 = FLAP_3_HOVER_ANGLE+0.05f;
+            control->flap_4 = FLAP_4_HOVER_ANGLE-0.05f;
           }
         }
         // if(manual==3){
