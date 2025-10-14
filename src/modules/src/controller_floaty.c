@@ -506,11 +506,24 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
           // control->flap_1 = ext_ctrl_m1;
         }
         else{
+          // What happens when the communication is lost
           if(state->connectedToOffboard==false){
+<<<<<<< HEAD
             control->flap_1 = ext_ctrl_m1;
             control->flap_2 = ext_ctrl_m2;
             control->flap_3 = ext_ctrl_m3;
             control->flap_4 = ext_ctrl_m4;
+=======
+            // control->flap_1 = ext_ctrl_m1;
+            // control->flap_2 = ext_ctrl_m2;
+            // control->flap_3 = ext_ctrl_m3;
+            // control->flap_4 = ext_ctrl_m4;
+            // // This is a safer configuration for landing
+            control->flap_1 = FLAP_1_HOVER_ANGLE+0.05;
+            control->flap_2 = FLAP_2_HOVER_ANGLE-0.05;
+            control->flap_3 = FLAP_3_HOVER_ANGLE+0.05;
+            control->flap_4 = FLAP_4_HOVER_ANGLE-0.05;
+>>>>>>> 78b6251e... Changed flap angles to near hover configureation when Optitrack communications is lost
           }
         }
         // if(manual==3){
