@@ -90,6 +90,7 @@ const bool test_rate_PID = true;
 const bool switching_conf = false;
 
 static uint8_t manual = 1;
+static uint8_t controller_num = 0;
 
 static floaty_control_t* input_last;
 static floaty_control_t* input_b_last;
@@ -810,6 +811,10 @@ PARAM_GROUP_START(extCtrl)
  * @brief A parameter to set the type of the control
  */
   PARAM_ADD_CORE(LOG_UINT8, manual, &manual)
+/**
+ * @brief A parameter to set the number of used control
+ */
+  PARAM_ADD_CORE(LOG_UINT8, ctrl_num, &controller_num)
 /**
  * @brief A parameter to set the target yaw angle
  */
