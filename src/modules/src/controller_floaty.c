@@ -90,6 +90,8 @@ const bool test_rate_PID = true;
 const bool switching_conf = false;
 
 static uint8_t manual = 1;
+static uint8_t controller_num = 0;
+static uint8_t default_controller_num = 0;
 
 static floaty_control_t* input_last;
 static floaty_control_t* input_b_last;
@@ -324,13 +326,17 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
     // mat_mult(&Km, &tmpNN2m, &tmpNN1m);
 
-
+    //  Check the controller number to be less than available controllers
+    if(controller_num>=CONTROLLERS_NUMBER){
+      controller_num = default_controller_num;
+    }
+    
     if(test_rate_PID && state->connectedToOffboard==true){
 
       for(int iter=0; iter<F_ERR_ARX; iter++){
         error_I_d[iter] = error_I_d[iter] + error_m[iter]*control_dt;
         error_D_d[iter] = (error_m[iter]-error_prev_d[iter])/control_dt;
-        error_PID_d[iter] = error_m[iter]*P_vector[iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
+        error_PID_d[iter] = error_m[iter]*P_vectors[controller_num][iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
         error_prev_d[iter] = error_m[iter];
       }
 
@@ -351,7 +357,7 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       for(int iter=F_ERR_ARX; iter<F_ERR_DIM; iter++){
         error_I_d[iter] = error_I_d[iter] + error_m[iter]*control_dt;
         error_D_d[iter] = (error_m[iter]-error_prev_d[iter])/control_dt;
-        error_PID_d[iter] = error_m[iter]*P_vector[iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
+        error_PID_d[iter] = error_m[iter]*P_vectors[controller_num][iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
         error_prev_d[iter] = error_m[iter];
       }
 
@@ -810,6 +816,10 @@ PARAM_GROUP_START(extCtrl)
  * @brief A parameter to set the type of the control
  */
   PARAM_ADD_CORE(LOG_UINT8, manual, &manual)
+/**
+ * @brief A parameter to set the number of used control
+ */
+  PARAM_ADD_CORE(LOG_UINT8, ctrl_num, &controller_num)
 /**
  * @brief A parameter to set the target yaw angle
  */
