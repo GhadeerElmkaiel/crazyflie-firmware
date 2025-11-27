@@ -62,10 +62,10 @@
 // int16_t motShift4 = 6200;
 
 // Floaty V4
-int16_t motShift1 = -6200;
+int16_t motShift1 = -3600;
 int16_t motShift2 = -7000;
 int16_t motShift3 = 4300;
-int16_t motShift4 = 7200;
+int16_t motShift4 = 5600;
 
 static uint32_t idleThrust = DEFAULT_IDLE_THRUST;
 
