@@ -57,7 +57,7 @@
 
 // Floaty V3
 int16_t motShift1 = -3600;
-int16_t motShift2 = -5000;
+int16_t motShift2 = -7000;
 int16_t motShift3 = 4300;
 int16_t motShift4 = 5600;
 
