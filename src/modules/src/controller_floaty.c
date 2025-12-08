@@ -48,7 +48,7 @@ int phase_num;
 // static float min_f_ang = -0.7;
 // static float max_f_ang = 0.7;
 
-static float min_f_ang = -0.9;
+static float min_f_ang = -0.3;
 static float max_f_ang = 0.9;
 
 static int table_iter = 0;
@@ -59,6 +59,7 @@ static int table_iter = 0;
 
 static float ctrl_output_log[] = {0, 0, 0, 0};
 static float ctrl_motor_log[] = {0, 0, 0, 0};
+static float ctrl_tilde_log[] = {0, 0, 0, 0};
 // static float ext_ctrl[] = {0, 0, 0, 0};
 static float ext_ctrl_m1 =  0.0;
 static float ext_ctrl_m2 = -0.0;
@@ -89,6 +90,8 @@ const bool test_rate_PID = true;
 const bool switching_conf = false;
 
 static uint8_t manual = 1;
+static uint8_t controller_num = 0;
+static uint8_t default_controller_num = 0;
 
 static floaty_control_t* input_last;
 static floaty_control_t* input_b_last;
@@ -323,13 +326,17 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
 
     // mat_mult(&Km, &tmpNN2m, &tmpNN1m);
 
-
+    //  Check the controller number to be less than available controllers
+    if(controller_num>=CONTROLLERS_NUMBER){
+      controller_num = default_controller_num;
+    }
+    
     if(test_rate_PID && state->connectedToOffboard==true){
 
       for(int iter=0; iter<F_ERR_ARX; iter++){
         error_I_d[iter] = error_I_d[iter] + error_m[iter]*control_dt;
         error_D_d[iter] = (error_m[iter]-error_prev_d[iter])/control_dt;
-        error_PID_d[iter] = error_m[iter]*P_vector[iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
+        error_PID_d[iter] = error_m[iter]*P_vectors[controller_num][iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
         error_prev_d[iter] = error_m[iter];
       }
 
@@ -350,7 +357,7 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       for(int iter=F_ERR_ARX; iter<F_ERR_DIM; iter++){
         error_I_d[iter] = error_I_d[iter] + error_m[iter]*control_dt;
         error_D_d[iter] = (error_m[iter]-error_prev_d[iter])/control_dt;
-        error_PID_d[iter] = error_m[iter]*P_vector[iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
+        error_PID_d[iter] = error_m[iter]*P_vectors[controller_num][iter] + error_I_d[iter]*I_vector[iter] + error_D_d[iter]*D_vector[iter];
         error_prev_d[iter] = error_m[iter];
       }
 
@@ -359,15 +366,15 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       compined_PID_d[2] = error_PID_d[2] + error_PID_d[5];
       compined_PID_d[3] = error_PID_d[8] + error_PID_d[11];
 
+      ctrl_tilde_log[0] = compined_PID_d[0];
+      ctrl_tilde_log[1] = compined_PID_d[1];
+      ctrl_tilde_log[2] = compined_PID_d[2];
+      ctrl_tilde_log[3] = compined_PID_d[3];
+
+
       if(compined_PID_d[2]>flapHoverAng){
         compined_PID_d[2]=flapHoverAng;
       }
-
-      // compined_PID_d[0] = 0;
-      // compined_PID_d[1] = 0;
-      // compined_PID_d[2] = 0;
-      // compined_PID_d[3] = 0;
-
       // Multiply the u matrix by the compined PID to generate the control matrix
       mat_mult(&tmpNN4m, &tmpNN3m, &tmpNN1m);
     }
@@ -452,16 +459,22 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       else{
 
         if(manual==4){
-          // iter_step = (int)SWITCHING_RATE/(cos_signal_rate*2);
+          // iter_step = (int)SWITCHING_RATE/(cos_signal_rate*2);sin_table
 
-          control->flap_1 = FLAP_1_HOVER_ANGLE*square_table[table_iter];
-          control->flap_2 = FLAP_2_HOVER_ANGLE*square_table[table_iter];
-          control->flap_3 = FLAP_3_HOVER_ANGLE*square_table[table_iter];
-          control->flap_4 = FLAP_4_HOVER_ANGLE*square_table[table_iter];
+          control->flap_1 = 2*FLAP_1_HOVER_ANGLE*sin_table[(table_iter*3)%table_size];
+          control->flap_2 = 2*FLAP_2_HOVER_ANGLE*sin_table[(table_iter*3)%table_size];
+          control->flap_3 = 2*FLAP_3_HOVER_ANGLE*sin_table[(table_iter*3)%table_size];
+          control->flap_4 = 2*FLAP_4_HOVER_ANGLE*sin_table[(table_iter*3)%table_size];
+
+          // control->flap_1 = FLAP_1_HOVER_ANGLE*square_table[table_iter];
+          // control->flap_2 = FLAP_2_HOVER_ANGLE*square_table[table_iter];
+          // control->flap_3 = FLAP_3_HOVER_ANGLE*square_table[table_iter];
+          // control->flap_4 = FLAP_4_HOVER_ANGLE*square_table[table_iter];
 
           // control->flap_1 = ext_ctrl_m1;
         }
         else{
+          // What happens when the communication is lost
           if(state->connectedToOffboard==false){
             // control->flap_1 = ext_ctrl_m1;
             // control->flap_2 = ext_ctrl_m2;
@@ -524,12 +537,8 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     ctrl_output_log[2] = control_m[2];
     ctrl_output_log[3] = control_m[3];
 
-    // if(control->flap_1 < min_f_ang){
-    //   control->flap_1 = min_f_ang;
-    // }
-
-    if(control->flap_1 < 0){
-      control->flap_1 = 0;
+    if(control->flap_1 < min_f_ang){
+      control->flap_1 = min_f_ang;
     }
 
     if(control->flap_1 > max_f_ang){
@@ -537,25 +546,16 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     }
 
 
-    if(control->flap_2 < min_f_ang){
-      control->flap_2 = min_f_ang;
+    if(control->flap_2 < -max_f_ang){
+      control->flap_2 = -max_f_ang;
     }
 
-    // if(control->flap_2 > max_f_ang){
-    //   control->flap_2 = max_f_ang;
-    // }
-
-    if(control->flap_2 > 0){
-      control->flap_2 = 0;
+    if(control->flap_2 > -min_f_ang){
+      control->flap_2 = -min_f_ang;
     }
 
-
-    // if(control->flap_3 < min_f_ang){
-    //   control->flap_3 = min_f_ang;
-    // }
-
-    if(control->flap_3 < 0){
-      control->flap_3 = 0;
+    if(control->flap_3 < min_f_ang){
+      control->flap_3 = min_f_ang;
     }
 
     if(control->flap_3 > max_f_ang){
@@ -563,17 +563,51 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     }
 
 
-    if(control->flap_4 < min_f_ang){
-      control->flap_4 = min_f_ang;
+    if(control->flap_4 < -max_f_ang){
+      control->flap_4 = -max_f_ang;
     }
 
-    // if(control->flap_4 > max_f_ang){
-    //   control->flap_4 = max_f_ang;
+    if(control->flap_4 > -min_f_ang){
+      control->flap_4 = -min_f_ang;
+    }
+    
+    // ---------------------------
+    // // Limit falps by zero
+    // ---------------------------
+
+    // if(control->flap_1 < 0){
+    //   control->flap_1 = 0;
     // }
 
-    if(control->flap_4 > 0){
-      control->flap_4 = 0;
-    }
+    // if(control->flap_1 > max_f_ang){
+    //   control->flap_1 = max_f_ang;
+    // }
+
+
+    // if(control->flap_2 < -max_f_ang){
+    //   control->flap_2 = -max_f_ang;
+    // }
+
+    // if(control->flap_2 > 0){
+    //   control->flap_2 = 0;
+    // }
+
+    // if(control->flap_3 < 0){
+    //   control->flap_3 = 0;
+    // }
+
+    // if(control->flap_3 > max_f_ang){
+    //   control->flap_3 = max_f_ang;
+    // }
+
+
+    // if(control->flap_4 < -max_f_ang){
+    //   control->flap_4 = -max_f_ang;
+    // }
+
+    // if(control->flap_4 > 0){
+    //   control->flap_4 = 0;
+    // }
     
 
     measurement_t measurement;
@@ -750,6 +784,30 @@ LOG_GROUP_STOP(motors_ctrp)
 
 
 /**
+ * The command that get to the motors
+ */
+LOG_GROUP_START(ctrl_tilde)
+/**
+ * @brief The control that M1 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m1, &ctrl_tilde_log[0])
+/**
+ * @brief The control that M2 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m2, &ctrl_tilde_log[1])
+/**
+ * @brief The control that M3 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m3, &ctrl_tilde_log[2])
+/**
+ * @brief The control that M4 gets (in Radian)
+ */
+LOG_ADD_CORE(LOG_FLOAT, m4, &ctrl_tilde_log[3])
+
+LOG_GROUP_STOP(ctrl_tilde)
+
+
+/**
  * Logging variables for the command and reference signals for the
  * altitude PID controller
  */
@@ -758,6 +816,10 @@ PARAM_GROUP_START(extCtrl)
  * @brief A parameter to set the type of the control
  */
   PARAM_ADD_CORE(LOG_UINT8, manual, &manual)
+/**
+ * @brief A parameter to set the number of used control
+ */
+  PARAM_ADD_CORE(LOG_UINT8, ctrl_num, &controller_num)
 /**
  * @brief A parameter to set the target yaw angle
  */
