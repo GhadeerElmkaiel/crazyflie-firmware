@@ -36,6 +36,7 @@ docs/api/logs.md_raw
 docs/api/params.md_raw
 docs/api/log_param_doc.json
 docs/api
+vendor/
 
 build/
 # To avoid that /tools/build is ignored

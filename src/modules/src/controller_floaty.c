@@ -80,6 +80,16 @@ NO_DMA_CCM_SAFE_ZERO_INIT static float error_D_d[F_ERR_DIM];
 // Temporary matrix for the sum of the PID effect
 NO_DMA_CCM_SAFE_ZERO_INIT static float error_PID_d[F_ERR_DIM];
 
+// Temporary matrix for the previous state
+NO_DMA_CCM_SAFE_ZERO_INIT static float x_k_1[F_ERR_DIM];
+
+// Temporary matrix for the previous input
+NO_DMA_CCM_SAFE_ZERO_INIT static float u_k_1[4];
+
+
+// Temporary matrix for the additional ARX terms
+NO_DMA_CCM_SAFE_ZERO_INIT static float error_PID_ARX[F_ERR_DIM + 4];
+
 // static float x_err_int = 0.0;
 // static float y_err_int = 0.0;
 // static float z_err_int = 0.0;
@@ -152,73 +162,28 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     // floatyControlDelayCompensation(coreData, input_b_last, dt);
     // floatyControlDelayCompensation(coreData, input_last, dt);
 
-    if(switching_conf){
-      if(phase_num%2==0){
-        
-        error_m[F_ERR_X] = setpoint->position.x - state->position.x;
-        error_m[F_ERR_Y] = setpoint->position.y - state->position.y;
+    // // ------------ NO DELAY COMPENSTAION ------------
+    // Update error NO DELAY COMPENSTAION
+    error_m[F_ERR_X] = setpoint->position.x - state->position.x;
+    error_m[F_ERR_Y] = setpoint->position.y - state->position.y;
+    error_m[F_ERR_Z] = setpoint->position.z - state->position.z;
 
-        error_m[F_ERR_PX] = setpoint->velocity.x - state->velocity.x;
-        error_m[F_ERR_PY] = setpoint->velocity.y - state->velocity.y;
+    error_m[F_ERR_PX] = setpoint->velocity.x - state->velocity.x;
+    error_m[F_ERR_PY] = setpoint->velocity.y - state->velocity.y;
+    error_m[F_ERR_PZ] = setpoint->velocity.z - state->velocity.z;
 
-        error_m[F_ERR_ROLL] = setpoint->attitude.roll - state->attitude.roll;
-        error_m[F_ERR_PITCH] = setpoint->attitude.pitch - state->attitude.pitch;
+    error_m[F_ERR_ROLL] = setpoint->attitude.roll - state->attitude.roll;
+    error_m[F_ERR_PITCH] = setpoint->attitude.pitch - state->attitude.pitch;
+    error_m[F_ERR_YAW] = setpoint->attitude.yaw - state->attitude.yaw;
 
-        error_m[F_ERR_ARX] = setpoint->attitudeRate.roll - state->attitudeRate.roll;
-        error_m[F_ERR_ARY] = setpoint->attitudeRate.pitch - state->attitudeRate.pitch;
-      }
-      else{
-        
-        error_m[F_ERR_Y] = -(setpoint->position.x - state->position.x);
-        error_m[F_ERR_X] = setpoint->position.y - state->position.y;
+    error_m[F_ERR_ARX] = setpoint->attitudeRate.roll - state->attitudeRate.roll;
+    error_m[F_ERR_ARY] = setpoint->attitudeRate.pitch - state->attitudeRate.pitch;
+    error_m[F_ERR_ARZ] = setpoint->attitudeRate.yaw - state->attitudeRate.yaw;
 
-        error_m[F_ERR_PY] = -(setpoint->velocity.x - state->velocity.x);
-        error_m[F_ERR_PX] = setpoint->velocity.y - state->velocity.y;
-
-        error_m[F_ERR_PITCH] = -(setpoint->attitude.roll - state->attitude.roll);
-        error_m[F_ERR_ROLL] = setpoint->attitude.pitch - state->attitude.pitch;
-
-        error_m[F_ERR_ARY] = -(setpoint->attitudeRate.roll - state->attitudeRate.roll);
-        error_m[F_ERR_ARX] = setpoint->attitudeRate.pitch - state->attitudeRate.pitch;
-      }
-
-
-      error_m[F_ERR_Z] = setpoint->position.z - state->position.z;
-      error_m[F_ERR_PZ] = setpoint->velocity.z - state->velocity.z;
-
-      error_m[F_ERR_YAW] = setpoint->attitude.yaw - state->attitude.yaw;
-      error_m[F_ERR_ARZ] = setpoint->attitudeRate.yaw - state->attitudeRate.yaw;
-
-      error_m[F_ERR_F1] = setpoint->flaps.flap_1 - state->flaps.flap_1;
-      error_m[F_ERR_F2] = setpoint->flaps.flap_2 - state->flaps.flap_2;
-      error_m[F_ERR_F3] = setpoint->flaps.flap_3 - state->flaps.flap_3;
-      error_m[F_ERR_F4] = setpoint->flaps.flap_4 - state->flaps.flap_4;
-
-    }
-    else{
-      // // ------------ NO DELAY COMPENSTAION ------------
-      // Update error NO DELAY COMPENSTAION
-      error_m[F_ERR_X] = setpoint->position.x - state->position.x;
-      error_m[F_ERR_Y] = setpoint->position.y - state->position.y;
-      error_m[F_ERR_Z] = setpoint->position.z - state->position.z;
-
-      error_m[F_ERR_PX] = setpoint->velocity.x - state->velocity.x;
-      error_m[F_ERR_PY] = setpoint->velocity.y - state->velocity.y;
-      error_m[F_ERR_PZ] = setpoint->velocity.z - state->velocity.z;
-
-      error_m[F_ERR_ROLL] = setpoint->attitude.roll - state->attitude.roll;
-      error_m[F_ERR_PITCH] = setpoint->attitude.pitch - state->attitude.pitch;
-      error_m[F_ERR_YAW] = setpoint->attitude.yaw - state->attitude.yaw;
-
-      error_m[F_ERR_ARX] = setpoint->attitudeRate.roll - state->attitudeRate.roll;
-      error_m[F_ERR_ARY] = setpoint->attitudeRate.pitch - state->attitudeRate.pitch;
-      error_m[F_ERR_ARZ] = setpoint->attitudeRate.yaw - state->attitudeRate.yaw;
-
-      error_m[F_ERR_F1] = setpoint->flaps.flap_1 - state->flaps.flap_1;
-      error_m[F_ERR_F2] = setpoint->flaps.flap_2 - state->flaps.flap_2;
-      error_m[F_ERR_F3] = setpoint->flaps.flap_3 - state->flaps.flap_3;
-      error_m[F_ERR_F4] = setpoint->flaps.flap_4 - state->flaps.flap_4;
-    }
+    error_m[F_ERR_F1] = setpoint->flaps.flap_1 - state->flaps.flap_1;
+    error_m[F_ERR_F2] = setpoint->flaps.flap_2 - state->flaps.flap_2;
+    error_m[F_ERR_F3] = setpoint->flaps.flap_3 - state->flaps.flap_3;
+    error_m[F_ERR_F4] = setpoint->flaps.flap_4 - state->flaps.flap_4;
 
     float yaw = state->attitude.yaw;
 
@@ -361,10 +326,21 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
         error_prev_d[iter] = error_m[iter];
       }
 
-      compined_PID_d[0] = error_PID_d[0] + error_PID_d[3] + error_PID_d[7] + error_PID_d[10];
-      compined_PID_d[1] = error_PID_d[1] + error_PID_d[4] + error_PID_d[6] + error_PID_d[9];
-      compined_PID_d[2] = error_PID_d[2] + error_PID_d[5];
-      compined_PID_d[3] = error_PID_d[8] + error_PID_d[11];
+      // Adding the effect of the ARX terms from previous state
+      for(int iter=0; iter<F_ERR_DIM; iter++){
+        error_PID_ARX[iter] = x_k_1[iter]*P_vectors[controller_num][iter+12];
+        x_k_1[iter] = error_m[iter];
+      }
+
+      // Adding the effect of the ARX terms from previous input
+      for(int iter=0; iter<4; iter++){
+        error_PID_ARX[iter+12] = u_k_1[iter]*P_vectors[controller_num][iter+24];
+      }
+
+      compined_PID_d[0] = error_PID_d[0] + error_PID_d[3] + error_PID_d[7] + error_PID_d[10] + error_PID_ARX[0] + error_PID_ARX[3] + error_PID_ARX[7] + error_PID_ARX[10] + error_PID_ARX[12];
+      compined_PID_d[1] = error_PID_d[1] + error_PID_d[4] + error_PID_d[6] + error_PID_d[9] + error_PID_ARX[1] + error_PID_ARX[4] + error_PID_ARX[6] + error_PID_ARX[9] + error_PID_ARX[13];
+      compined_PID_d[2] = error_PID_d[2] + error_PID_d[5] + error_PID_ARX[2] + error_PID_ARX[5] + error_PID_ARX[14];
+      compined_PID_d[3] = error_PID_d[8] + error_PID_d[11] + error_PID_ARX[8] + error_PID_ARX[11] + error_PID_ARX[15];
 
       ctrl_tilde_log[0] = compined_PID_d[0];
       ctrl_tilde_log[1] = compined_PID_d[1];
@@ -377,6 +353,11 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
       }
       // Multiply the u matrix by the compined PID to generate the control matrix
       mat_mult(&tmpNN4m, &tmpNN3m, &tmpNN1m);
+      
+      // Store the previous input
+      for(int iter=0; iter<4; iter++){
+        u_k_1[iter] = control_m[iter];
+      }
     }
 
     // if(use_I_ctrl){
@@ -412,28 +393,10 @@ void controllerFloaty(floaty_control_t *control, setpoint_t *setpoint,
     }
     else{
       // Add the hovering angles to the control results
-      if(switching_conf){
-        // Normal configuration
-        if(phase_num%2==0){
-          control->flap_1 = control_m[0] + setpoint->flaps.flap_1*square_table[table_iter];
-          control->flap_2 = control_m[1] + setpoint->flaps.flap_2*square_table[table_iter];
-          control->flap_3 = control_m[2] + setpoint->flaps.flap_3*square_table[table_iter];
-          control->flap_4 = control_m[3] + setpoint->flaps.flap_4*square_table[table_iter];
-        }
-        // Reversed configuration
-        else{
-          control->flap_1 = control_m[3] + setpoint->flaps.flap_1*square_table[table_iter];
-          control->flap_2 = control_m[0] + setpoint->flaps.flap_2*square_table[table_iter];
-          control->flap_3 = control_m[1] + setpoint->flaps.flap_3*square_table[table_iter];
-          control->flap_4 = control_m[2] + setpoint->flaps.flap_4*square_table[table_iter];
-        }
-      }
-      else{
-        control->flap_1 = control_m[0] + setpoint->flaps.flap_1;
-        control->flap_2 = control_m[1] + setpoint->flaps.flap_2;
-        control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
-        control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
-      }
+      control->flap_1 = control_m[0] + setpoint->flaps.flap_1;
+      control->flap_2 = control_m[1] + setpoint->flaps.flap_2;
+      control->flap_3 = control_m[2] + setpoint->flaps.flap_3;
+      control->flap_4 = control_m[3] + setpoint->flaps.flap_4;
 
       // // Integrate error
       // pos_error_I[0] += error_m[F_ERR_X]*control_dt;
