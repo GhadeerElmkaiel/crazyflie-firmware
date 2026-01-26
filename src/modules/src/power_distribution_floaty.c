@@ -56,7 +56,7 @@
 // static int16_t motShift4 = 4400;
 
 // Floaty V3
-int16_t motShift1 = -600;
+int16_t motShift1 = -2000;
 int16_t motShift2 = -5000;
 int16_t motShift3 = 4300;
 int16_t motShift4 = 5600;
