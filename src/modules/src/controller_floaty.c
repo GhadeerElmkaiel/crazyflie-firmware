@@ -49,7 +49,7 @@ int phase_num;
 // static float max_f_ang = 0.7;
 
 static float min_f_ang = -0.3;
-static float max_f_ang = 0.9;
+static float max_f_ang = 0.8;
 
 static int table_iter = 0;
 
