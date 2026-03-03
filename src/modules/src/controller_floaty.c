@@ -100,8 +100,13 @@ const bool test_rate_PID = true;
 const bool switching_conf = false;
 
 static uint8_t manual = 1;
-static uint8_t controller_num = 0;
-static uint8_t default_controller_num = 0;
+// static uint8_t default_controller_num = 0;
+static uint8_t default_controller_num = 11;
+
+// static uint8_t controller_num = 0;
+static uint8_t controller_num = 11;
+// static uint8_t controller_num = 57;
+// static uint8_t controller_num = 151;
 
 static floaty_control_t* input_last;
 static floaty_control_t* input_b_last;
