@@ -79,6 +79,8 @@
 
 #include "cf_mock.h"
 
+#include "esp32_comm.h"
+
 #ifndef CONFIG_MOTORS_START_DISARMED
 #define ARM_INIT true
 #else
@@ -154,6 +156,9 @@ void systemInit(void)
 #ifdef CONFIG_APP_ENABLE
   appInit();
 #endif
+
+  // Initialize the ESP communication 
+  esp32CommInit();
 
   isInit = true;
 }
